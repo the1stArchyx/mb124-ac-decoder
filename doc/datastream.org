@@ -1,0 +1,125 @@
+#+TITLE: Mercedes-Benz model 124 air conditioner (SA code 580) data stream
+#+AUTHOR: Lauri Lindholm
+#+EMAIL: archyx@pp.htv.fi
+
+* Disclaimer
+
+The information in this document is provided as is with no warranty of
+any kind. The information provided is mostly based on reverse
+engineering efforts.
+
+
+* What?
+
+This document describes the format of the raw "actual value" data
+stream provided by some Mercedes-Benz model 124 air conditioning
+control modules. So far it is to be figured out if only modules from
+certain manufacturers supply this stream or if it was merely an early
+experiment or manufacturing stage function check.
+
+
+* Packet format
+
+A whole packet is made of individual 41 bytes as follows:
+
+** 0x00 – temperature setting dial, left (input)
+
+This is a signed byte in range between -56 (0xc8, 14 °C) and 24 (0x18,
+30 °C). The actual temperature value in °C can be calculated with the
+following formula:
+
+: actual = (raw + 126) / 5
+
+This value indicates the user-requested temperature from the dial
+position on the control unit's panel.
+
+
+** 0x01 – temperature adjustment target, left (internal)
+
+This is a signed byte that indicates the temperature the control
+module is attempting to adjust to. It is biased by multiple factors,
+like both user-requested temperatures and the outside air
+temperature. For actual value, see 0x00 above.
+
+
+** 0x02 – temperature dial, right (input)
+
+See 0x00 above.
+
+
+** 0x03 – temperature adjustment target, right (internal)
+
+See 0x01 above.
+
+
+** 0x04 – countdown (internal)
+
+Right after switching on ignition this counter counts from 120 (0x78)
+down to 0 once in about 10 minutes, ie. in 5-second steps. The counter
+appears to be used for timing some sort of self-calibration.
+
+
+** 0x05 – mixing chamber temperature, left (input)
+
+This unsigned byte ranges between 0 (10 °C) and 243 (0xf3,
+70.75 °C). The actual value in °C can be calculated with the following
+formula:
+
+: actual = (raw + 40) / 4
+
+The mixing chamber temperature affects the feedback loop for the water
+valve control.
+
+
+** 0x06 – mixing chamber temperature, right (input)
+
+See 0x05.
+
+
+** 0x07 – interior air temperature (input)
+
+This signed byte ranges between -128 (0x80) and +126 (0x7e). The
+actual value in °C can be obtained with the following formula:
+
+: actual = (raw + 126) / 5
+
+
+** 0x08 – exterior air temperature (input)
+
+This signed byte ranges between -64 (0xc0) and 126 (0x7e). The formula
+for the actual value in °C is as follows:
+
+: actual = raw / 2
+
+
+** 0x09 – temperature control, left (internal)
+
+This signed byte is the difference of dampened interior temperature
+(see 0x19) and the temperature adjustment target of the respective
+side. It ranges between -128 (0x80, -25.6 °C) and +127 (0x7f,
++25.4 °C). The actual value in °C can be calculated with the following
+formula:
+
+: actual = raw / 5
+
+
+** 0x10 – temperature control, right (internal)
+
+See 0x09 above.
+
+
+* Serial data electricals
+
+The serial data supplied is basically 8-N-1 at 4,800 bps. The only
+difference to RS-232 or TTL are the signal levels used. See the table
+below:
+
+|       | RS-232    | TTL    | MB     |
+|-------+-----------+--------+--------|
+| mark  | -15..-3 V | +5.0 V | +8.0 V |
+| space | +3..+15 V | +0.0 V | +0.8 V |
+
+For research purposes the output from the vehicle was converted to TTL
+by means of a simple circuit of diodes and resistors to use an FTDI
+TTL-232R-5V "USB ti TTL Serial Cable". This is what the initial Python
+programs were designed around.
