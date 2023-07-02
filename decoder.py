@@ -201,7 +201,7 @@ def printByte(outwin, msg_pad, byte, ticker):
                 if statuses["selfcal"]:
                     statuses["selfcal"] = False
                     msg_pad.addstr(logtime() + "Self-calibration off.\n")
-            
+
 
             if (bits & 0x20):   # bit 5 - temperature maintaining mode
                 colour = curses.color_pair(1)
@@ -304,7 +304,7 @@ def printByte(outwin, msg_pad, byte, ticker):
                 outwin.addstr(getLine(ticker, 1), getCol(ticker, 1), "  on ", curses.color_pair(2))
             else:
                 outwin.addstr(getLine(ticker, 1), getCol(ticker, 1), " off ")
-            
+
             if (bits & 0x04):   # bit 2 - recirculation, full
                 outwin.addstr(getLine(ticker, 3), getCol(ticker, 3), " 100% ", curses.color_pair(3))
                 if statuses["circmode"] != 2:
@@ -325,7 +325,7 @@ def printByte(outwin, msg_pad, byte, ticker):
                 outwin.addstr(getLine(ticker, 4), getCol(ticker, 4), "  on ", curses.color_pair(1))
             else:
                 outwin.addstr(getLine(ticker, 4), getCol(ticker, 4), " off ")
-        
+
             if (bits & 0x20):   # bit 5
                 status = "1 /   set"
             else:
@@ -354,9 +354,9 @@ def printByte(outwin, msg_pad, byte, ticker):
             # changeover whould be at -28, white/red changeover should
             # be at 0; ie. blue  <-28; white -28<0; red >0
             rawi = int.from_bytes(byte, signed=True)
-            if rawi < -28:
+            if rawi < -33:
                 colour = curses.color_pair(1)
-            elif rawi > 0:
+            elif rawi > -1:
                 colour = curses.color_pair(2)
             else:
                 colour = curses.A_REVERSE
@@ -404,25 +404,25 @@ def printByte(outwin, msg_pad, byte, ticker):
 
         case 0x05:  # mixing chamber temp, left
             rawi = int.from_bytes(byte)
-            tempf = (rawi + 30) / 3
+            tempf = (rawi + 40) / 4
             colour = 0
             if not rawi:
                 colour = curses.color_pair(1)
             elif rawi > 242:
                 colour = curses.color_pair(2)
             outwin.addstr(getLine(ticker), getCol(ticker), f"{rawi:3d} ")
-            outwin.addstr(f"{tempf:5.1f}° ", colour)
+            outwin.addstr(f"{tempf:6.2f}° ", colour)
 
         case 0x06:  # mixing chamber temp, right
             rawi = int.from_bytes(byte)
-            tempf = (rawi + 30) / 3
+            tempf = (rawi + 40) / 4
             colour = 0
             if not rawi:
                 colour = curses.color_pair(1)
             elif rawi > 242:
                 colour = curses.color_pair(2)
             outwin.addstr(getLine(ticker), getCol(ticker), f"{rawi:3d} ")
-            outwin.addstr(f"{tempf:5.1f}° ", colour)
+            outwin.addstr(f"{tempf:6.2f}° ", colour)
 
         case 0x09:  # left temp control bias
             signed = int.from_bytes(byte, signed=True)
@@ -513,7 +513,7 @@ def printByte(outwin, msg_pad, byte, ticker):
             minutes = rawi // 12
             colour = 0
             if rawi:
-                colour = curses.color_pair(4)
+                colour = curses.color_pair(3)
             outwin.addstr(getLine(ticker), getCol(ticker), f"{rawi:4d} ", colour)
             if rawi:
                 outwin.addstr(f"  {minutes:2d} min. {seconds:2d} s")
@@ -619,7 +619,7 @@ def printLabels (outwin, labels):
                 (line, col, lab, dummy) = label[1]
                 outwin.addstr(line, col, lab)
 
-                
+
 def updTicker (ticker, window):
     if (ticker > 0x21):
         tickch = 's'
@@ -630,21 +630,20 @@ def updTicker (ticker, window):
 
     if not ticker:
         window.chgat(ticker_line, ticker_col + 0x28, 1, 0)
-        pass
     window.addstr(ticker_line, ticker_col + ticker, tickch, curses.color_pair(4))
     window.chgat(ticker_line, ticker_col + ticker - 1, 1, 0)
 
-    
+
 def openSource ():
     if (args.file == ""):
         return serial.Serial(args.port, args.baudrate, timeout=0.1)
     return open(args.file, "rb")
-    
+
 
 def mainLoop (stdscr):
     sync = 0
     outwin = stdscr.subwin(curses.LINES - 4, curses.COLS - 4, 3, 2)
-    msgwin = outwin.subpad(10, 80, 34, 2)
+    msgwin = outwin.subpad(9, 80, 33, 2)
     printLabels(outwin, labels)
     outwin.addstr(25, xRightLabel, "Sync bytes")
     outwin.scrollok(True)
@@ -668,12 +667,13 @@ def mainLoop (stdscr):
                 sync_hits  = [0, 0, 0, 0, 0, 0, 0]
                 ticker = 0
             elif (ticker > 0x21):  # data is read, check stream sync
-                sync = 0 
+                sync = 0
                 while (ticker < 0x29):
                     byte = readFByte(bytesource, stdscr)
                     tick = ticker - 0x22
                     if (byte == sync_bytes[tick]):
                         outwin.addstr(26, xRightLabel - 3 + (3 * (ticker - 0x21)), f"{byte.hex()}")
+                        outwin.addstr(29, xRightLabel - 4 + (3 * (ticker - 0x21)), f"{int.from_bytes(byte):3d}")
                         sync += 1
                     else:  # print non-matching sync bytes in reverse and a copy two lines below to catch them!
                         outwin.addstr(26, xRightLabel - 3 + (3 * (ticker - 0x21)), f"{byte.hex()}", curses.A_REVERSE)
@@ -698,7 +698,7 @@ def mainLoop (stdscr):
             ticker += 1
             outwin.refresh()
             msgwin.refresh()
-                
+
 
 def main (stdscr):
     curses.start_color()
