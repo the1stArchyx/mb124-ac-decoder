@@ -121,8 +121,8 @@ See 0x09 above.
 ** 0x0b – control bias, exterior air temperature                   :internal:
 
 This signed byte reacts to change of exterior temperature. The math to
-its absolute value is not clear, yet. The range of this value is yet
-to be acquired from the logged data.
+its absolute value is not clear, yet. Based on logged data so far the
+range is from -45 to +34.
 
 As with most other temperature control bias values, negative values
 bias towards heating and positive values towards cooling.

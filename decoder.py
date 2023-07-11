@@ -15,6 +15,8 @@
 #   - Group actuators controlled by, or controlling inputs near the
 #     values. Includes the "switch-on countdown" and "self-cal" status.
 
+#   - Create logic to detect the version variants from sync bytes.
+
 import argparse
 import curses
 import serial
