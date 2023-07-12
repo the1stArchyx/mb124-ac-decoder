@@ -1,0 +1,21 @@
+* Mercedes-Benz 124 A/C data stream decoder
+
+This crude, currently a work-in-progress, Python program decodes the
+data stream output from some air conditioner control units used in
+Mercedes-Benz model 124. Reverse engineering documentation about the
+data stream format and contents is available in doc/. Captures of data
+streams for offline testing are available in testdata/.
+
+Documentation of a known working hardware solution, a simple
+diode-zener-resistor circuit to convert the 7.2 Vp-p serial data
+signal to TTL, will be added later.
+
+At this point support cannot be provided and documentation is limited.
+
+Suggestions for improvement may be done by submitting an issue.
+
+
+* decoder.py dependencies
+
+The decoder requires Python 3.10 (match-case is used) and currently
+depends on ~argparse~, ~curses~, ~serial~, and ~time~.
