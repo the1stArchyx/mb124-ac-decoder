@@ -15,7 +15,15 @@ At this point support cannot be provided and documentation is limited.
 Suggestions for improvement may be done by submitting an issue.
 
 
-* decoder.py dependencies
+* decoder.py
 
 The decoder requires Python 3.10 (match-case is used) and currently
-depends on ~argparse~, ~curses~, ~serial~, and ~time~.
+depends on ~argparse~, ~curses~, ~serial~, and ~time~. The program is
+known to run on Debian bookworm and Arch Linux.
+
+Offline testing of the decoder can be done by supplying the program a
+capture of a data stream, for example:
+
+: ./decoder.py -f testdata/driving.bin
+
+Run ~./decoder.py -h~ for other options.
