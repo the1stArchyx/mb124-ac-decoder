@@ -15,6 +15,8 @@
 #   - Group actuators controlled by, or controlling inputs near the
 #     values. Includes the "switch-on countdown" and "self-cal" status.
 
+#   - Create logic to detect the version variants from sync bytes.
+
 import argparse
 import curses
 import serial
@@ -75,31 +77,31 @@ xRightLabel = 52
 #          left of the label
 
 labels = ((0b01, ( 2, xLeftLabel,  "Temp dial  . . . . :", 21)), # 0x00 - temp dial, left
-          (0b01, ( 6, xLeftLabel,  "Adjustment target  :", 21)), # 0x01 - temp dial, bias, left
+          (0b01, ( 9, xLeftLabel,  "Adjustment target  :", 21)), # 0x01 - temperature target, left
           (0b00, ( 2, xLeftLabel,  ""                    , 33)), # 0x02 - temp dial, right
-          (0b00, ( 6, xLeftLabel,  ""                    , 33)), # 0x03 - temp dial, bias, right
-          (0b01, (23, xLeftLabel,  "Self-cal. timer  . :", 21)), # 0x04 - self-calibration timer a.k.a. switch-on countdown, ~10 minutes
-          (0b01, (16, xLeftLabel,  "Mixing chamber temp:", 21)), # 0x05 - left
-          (0b00, (16, xLeftLabel,  ""                    , 33)), # 0x06 - right
-          (0b01, ( 8, xLeftLabel,  "Interior temp  . . :", 21)), # 0x07 - interior temp, raw
-          (0b01, (16, xRightLabel, "Exterior temp  . . :", 21)), # 0x08 - exterior temp
+          (0b00, ( 9, xLeftLabel,  ""                    , 33)), # 0x03 - temperature target, right
+          (0b01, (23, xRightLabel, "Self-cal. timer  . :", 21)), # 0x04 - self-calibration timer a.k.a. switch-on countdown, ~10 minutes
+          (0b01, (18, xLeftLabel,  "Mixing chamber temp:", 22)), # 0x05 - left
+          (0b00, (18, xLeftLabel,  ""                    , 34)), # 0x06 - right
+          (0b01, ( 6, xLeftLabel,  "Interior temp  . . :", 21)), # 0x07 - interior temp, raw
+          (0b01, (15, xRightLabel, "Exterior temp  . . :", 21)), # 0x08 - exterior temp
           (0b01, (11, xLeftLabel,  "Control (temp diff):", 21)), # 0x09 - left temp control bias
           (0b00, (11, xLeftLabel,  ""                    , 33)), # 0x0a - right temp control bias
-          (0b01, (17, xRightLabel, "^^ bias  . . . . . :", 21)), # 0x0b - exterior/interior temp control bias
-          (0b01, (12, xLeftLabel,  "^^ fast (valve ctr):", 21)), # 0x0c - left, fast
-          (0b00, (12, xLeftLabel,  ""                    , 33)), # 0x0d - right, fast
-          (0b01, (14, xLeftLabel,  "^^ slow (feedback) :", 21)), # 0x0e - left, slow
-          (0b00, (14, xLeftLabel,  ""                    , 33)), # 0x0f - right, slow
-          (0b01, (13, xLeftLabel,  "^^ mid . . . . . . :", 21)), # 0x10 - left, mid
-          (0b00, (13, xLeftLabel,  ""                    , 33)), # 0x11 - right, mid
-          (0b01, (18, xLeftLabel,  "Valve feedback ctrl:", 21)), # 0x12 - left valve feedback control bias
-          (0b00, (18, xLeftLabel,  ""                    , 33)), # 0x13 - right valve feedback control bias
-          (0b01, (19, xLeftLabel,  "Valve duty cycle . :", 21)), # 0x14 - left duty cycle
-          (0b00, (19, xLeftLabel,  ""                    , 33)), # 0x15 - right duty cycle
-          (0b01, (20, xRightLabel, "Engine coolant . . :", 21)), # 0x16 - coolant temp
-          (0b01, (18, xRightLabel, "Evaporator temp  . :", 21)), # 0x17 - evaporator temp
-          (0b01, (22, xRightLabel, "Overheat protection:", 21)), # 0x18 - overheat protection status
-          (0b01, ( 9, xLeftLabel,  "^^ dampened  . . . :", 21)), # 0x19 - interior temp, dampened
+          (0b01, (12, xLeftLabel,  "Ext. temp. bias  . :", 21)), # 0x0b - exterior/interior temp control bias
+          (0b01, (14, xLeftLabel,  "Heater drive . . . :", 21)), # 0x0c - left, fast
+          (0b00, (14, xLeftLabel,  ""                    , 33)), # 0x0d - right, fast
+          (0b01, (16, xLeftLabel,  "^^ slow (feedback) :", 21)), # 0x0e - left, slow (heater feedback reference)
+          (0b00, (16, xLeftLabel,  ""                    , 33)), # 0x0f - right, slow
+          (0b01, (15, xLeftLabel,  "^^ mid . . . . . . :", 21)), # 0x10 - left, mid
+          (0b00, (15, xLeftLabel,  ""                    , 33)), # 0x11 - right, mid
+          (0b01, (20, xLeftLabel,  "Valve feedback ctrl:", 21)), # 0x12 - left valve feedback control bias
+          (0b00, (20, xLeftLabel,  ""                    , 33)), # 0x13 - right valve feedback control bias
+          (0b01, (21, xLeftLabel,  "Valve duty cycle . :", 21)), # 0x14 - left duty cycle
+          (0b00, (21, xLeftLabel,  ""                    , 33)), # 0x15 - right duty cycle
+          (0b01, (18, xRightLabel, "Engine coolant . . :", 21)), # 0x16 - coolant temp
+          (0b01, (16, xRightLabel, "Evaporator temp  . :", 21)), # 0x17 - evaporator temp
+          (0b01, (20, xRightLabel, "Overheat protection:", 21)), # 0x18 - overheat protection status
+          (0b01, ( 7, xLeftLabel,  "Int.temp. (delayed):", 21)), # 0x19 - interior temp, dampened
           (0b11, (( 2, xRightLabel, "Recirculation  . . :", 21), # 0x1a/0 - user input: manual forced recirculation
                   ( 1, xRightLabel, "Economy mode . . . :", 21), # 0x1a/1 - user input: economy = manual A/C off
                   ( 0, xRightLabel, "Reheat mode  . . . :", 21), # 0x1a/2 - user input: reheat = manual A/C on
@@ -112,13 +114,13 @@ labels = ((0b01, ( 2, xLeftLabel,  "Temp dial  . . . . :", 21)), # 0x00 - temp d
            ),
           (0b01, ( 8, xRightLabel, "Recirculation timer:       min.", 21)), # 0x1b - recirculation timer
           (0b11, ((12, xRightLabel, "Center vents heat  :", 21), # 0x1c/0 - center vents temp control: 0 = heating bypassed; 1 = heated
-                  (21, xRightLabel, "Radiator blower II :", 21), # 0x1c/1 - radiator blower second stage
+                  (19, xRightLabel, "Radiator blower II :", 21), # 0x1c/1 - radiator blower second stage
                   ( 0, xRightLabel, ""                    , 21), # 0x1c/2 - 100% recirculation
                   ( 9, xRightLabel, "Recirculation mode :", 21), # 0x1c/3 -  80% recirculation
                   (13, xRightLabel, "A/C Compressor . . :", 21), # 0x1c/4 - A/C compressor request
                   (26, xLeftLabel,  "0x1c / 5 . . . . . :", 21), # 0x1c/5
                   (27, xLeftLabel,  "0x1c / 6 . . . . . :", 21), # 0x1c/6
-                  (20, xLeftLabel,  "Water pump . . . . :", 30), # 0x1c/7 - water recirculation pump
+                  (22, xLeftLabel,  "Water pump . . . . :", 31), # 0x1c/7 - water recirculation pump
                   )
            ),
           (0b11, (( 0, xLeftLabel,  ""                    , 21), # 0x1d/0 - max cooling, left
@@ -127,14 +129,14 @@ labels = ((0b01, ( 2, xLeftLabel,  "Temp dial  . . . . :", 21)), # 0x00 - temp d
                   ( 0, xLeftLabel,  ""                    , 33), # 0x1d/3 - defrost, right
                   (28, xLeftLabel,  "0x1d / 4 . . . . . :", 21), # 0x1d/4
                   (11, xRightLabel, "Temp control mode  :", 21), # 0x1d/5 - control mode: 0 = heating; 1 = cooling
-                  (22, xLeftLabel,  "Self-calibration . :", 21), # 0x1d/6 - self-calibration
+                  (22, xRightLabel, "Self-calibration . :", 21), # 0x1d/6 - self-calibration
                   ( 6, xRightLabel, "^^ recirculation . :", 21), # 0x1d/7 - cooling mode auto-recirculation
                   )
            ),
           (0b01, ( 3, xLeftLabel,  "^^ dampened  . . . :", 21)), # 0x1e - temp dial, left
-          (0b01, ( 4, xLeftLabel,  "adjustment damping :", 21)), # 0x1f - temp dial, left - adjustment damping
+          (0b01, ( 4, xLeftLabel,  "adjustment timer . :", 21)), # 0x1f - temp dial, left - adjustment timer
           (0b01, ( 3, xLeftLabel,  ""                    , 33)), # 0x20 - temp dial, right
-          (0b01, ( 4, xLeftLabel,  ""                    , 33)), # 0x21 - temp dial, right - adjustment damping
+          (0b01, ( 4, xLeftLabel,  ""                    , 33)), # 0x21 - temp dial, right - adjustment timer
           )
 
 
@@ -374,8 +376,15 @@ def printByte(outwin, msg_pad, byte, ticker):
             outwin.addstr(getLine(ticker), getCol(ticker), f"{int.from_bytes(byte, signed=True):3d} ")
             outwin.addstr(f"{actualf:5.1f}°")
 
-        case 0x1f:  # left adjustment damping
-            outwin.addstr(getLine(ticker), getCol(ticker), f"{int.from_bytes(byte):6d}")
+        case 0x1f:  # left adjustment time
+            if byte[0]:
+                colour = curses.color_pair(3)
+                timerstring = f"{int.from_bytes(byte):3d} s. "
+            else:
+                colour = 0
+                timerstring = " (off) "
+            outwin.addstr(getLine(ticker), getCol(ticker), timerstring, colour)
+                
 
         case 0x02:  # right dial
             rawi = int.from_bytes(byte, signed=True)
@@ -400,7 +409,13 @@ def printByte(outwin, msg_pad, byte, ticker):
             outwin.addstr(f"{actualf:5.1f}°")
 
         case 0x21:  # right adjustment damping
-            outwin.addstr(getLine(ticker), getCol(ticker), f"{int.from_bytes(byte):6d}")
+            if byte[0]:
+                colour = curses.color_pair(3)
+                timerstring = f"{int.from_bytes(byte):3d} s. "
+            else:
+                colour = 0
+                timerstring = " (off) "
+            outwin.addstr(getLine(ticker), getCol(ticker), timerstring, colour)
 
         case 0x05:  # mixing chamber temp, left
             rawi = int.from_bytes(byte)
@@ -426,43 +441,57 @@ def printByte(outwin, msg_pad, byte, ticker):
 
         case 0x09:  # left temp control bias
             signed = int.from_bytes(byte, signed=True)
-            if (signed < 0):
+            if (signed < -50):
                 colour = curses.color_pair(2)
-            elif (signed > 0):
+            elif (signed > 23):
                 colour = curses.color_pair(1)
             else:
                 colour = curses.color_pair(4)
             outwin.addstr(getLine(ticker),  getCol(ticker), f"{signed:4d} ", colour)
             outwin.addstr(f"{(signed / 5):5.1f}°")
 
-        case 0x0c:  # left, fast
-            outwin.addstr(getLine(ticker),  getCol(ticker), f"{int.from_bytes(byte):3d} {makePercent(byte):4d}%")
+        case 0x0c:  # left heater drive
+            if (byte[0] < 80):
+                colour = curses.color_pair(1)
+            elif (byte[0] > 80):
+                colour = curses.color_pair(2)
+            else:
+                colour = curses.color_pair(4)
+            outwin.addstr(getLine(ticker),  getCol(ticker), f" {byte[0]:3d} ", colour)
+            outwin.addstr(f"{(byte[0] - 80):4d}")
 
         case 0x10:  # left, mid
-            outwin.addstr(getLine(ticker),  getCol(ticker), f"{int.from_bytes(byte):3d} {makePercent(byte):4d}%")
+            outwin.addstr(getLine(ticker),  getCol(ticker), f" {byte[0]:3d} {(byte[0] - 80):4d}")
 
         case 0x0e:  # left, slow
-            outwin.addstr(getLine(ticker),  getCol(ticker), f"{int.from_bytes(byte):3d} {makePercent(byte):4d}%")
+            outwin.addstr(getLine(ticker),  getCol(ticker), f" {byte[0]:3d} {(byte[0] / 4):6.2f}°")
 
         case 0x0a:  # right temp control bias
             signed = int.from_bytes(byte, signed=True)
-            if (signed < 0):
+            if (signed < -50):
                 colour = curses.color_pair(2)
-            elif (signed > 0):
+            elif (signed > 23):
                 colour = curses.color_pair(1)
             else:
                 colour = curses.color_pair(4)
             outwin.addstr(getLine(ticker),  getCol(ticker), f"{signed:4d} ", colour)
             outwin.addstr(f"{(signed / 5):5.1f}°")
 
-        case 0x0d:  # right, fast
-            outwin.addstr(getLine(ticker), getCol(ticker), f"{int.from_bytes(byte):3d} {makePercent(byte):4d}%")
+        case 0x0d:  # right heater drive
+            if (byte[0] < 80):
+                colour = curses.color_pair(1)
+            elif (byte[0] > 80):
+                colour = curses.color_pair(2)
+            else:
+                colour = curses.color_pair(4)
+            outwin.addstr(getLine(ticker),  getCol(ticker), f" {byte[0]:3d} ", colour)
+            outwin.addstr(f"{(byte[0] - 80):4d}")
 
         case 0x11:  # right, mid
-            outwin.addstr(getLine(ticker), getCol(ticker), f"{int.from_bytes(byte):3d} {makePercent(byte):4d}%")
+            outwin.addstr(getLine(ticker), getCol(ticker), f" {byte[0]:3d} {(byte[0] - 80):4d}")
 
         case 0x0f:  # right, slow
-            outwin.addstr(getLine(ticker), getCol(ticker), f"{int.from_bytes(byte):3d} {makePercent(byte):4d}%")
+            outwin.addstr(getLine(ticker), getCol(ticker), f" {byte[0]:3d} {(byte[0] / 4):6.2f}°")
 
         case 0x12:  # left valve control bias
             signed = int.from_bytes(byte, signed=True)
@@ -472,7 +501,7 @@ def printByte(outwin, msg_pad, byte, ticker):
                 colour = curses.color_pair(1)
             else:
                 colour = curses.color_pair(4)
-            outwin.addstr(getLine(ticker),  getCol(ticker) + 2, f"{signed:4d} ", colour)
+            outwin.addstr(getLine(ticker),  getCol(ticker) + 3, f"{signed:4d} ", colour)
 
         case 0x13:  # right valve control bias
             signed = int.from_bytes(byte, signed=True)
@@ -482,7 +511,7 @@ def printByte(outwin, msg_pad, byte, ticker):
                 colour = curses.color_pair(1)
             else:
                 colour = curses.color_pair(4)
-            outwin.addstr(getLine(ticker), getCol(ticker) + 2, f"{signed:4d} ", colour)
+            outwin.addstr(getLine(ticker), getCol(ticker) + 3, f"{signed:4d} ", colour)
 
         case 0x14:  # left duty cycle
             colour = 0
@@ -490,7 +519,7 @@ def printByte(outwin, msg_pad, byte, ticker):
                 colour = curses.color_pair(1)
             elif byte == b"\xff":
                 colour = curses.color_pair(2)
-            outwin.addstr(getLine(ticker),  getCol(ticker), f"{int.from_bytes(byte):3d} {makePercent(byte):4d}% ", colour)
+            outwin.addstr(getLine(ticker),  getCol(ticker) + 1, f"{int.from_bytes(byte):3d} {makePercent(byte):4d}% ", colour)
 
         case 0x15:  # right duty cycle
             colour = 0
@@ -498,7 +527,7 @@ def printByte(outwin, msg_pad, byte, ticker):
                 colour = curses.color_pair(1)
             elif byte == b"\xff":
                 colour = curses.color_pair(2)
-            outwin.addstr(getLine(ticker), getCol(ticker), f"{int.from_bytes(byte):3d} {makePercent(byte):4d}% ", colour)
+            outwin.addstr(getLine(ticker), getCol(ticker) + 1, f"{int.from_bytes(byte):3d} {makePercent(byte):4d}% ", colour)
 
         case 0x1b: # recirculation timer
             rawi = int.from_bytes(byte)
@@ -558,7 +587,9 @@ def printByte(outwin, msg_pad, byte, ticker):
                 colour = curses.color_pair(1)
             else:
                 colour = curses.color_pair(4)
-            outwin.addstr(getLine(ticker), getCol(ticker), f"{(rawi / 5):6.1f} °C  ({rawi:4d})", colour)
+            outwin.addstr(getLine(ticker), getCol(ticker), f"{rawi:4d} = ")
+            outwin.addstr(f"{(rawi / 5):5.1f} °C ", colour)
+            outwin.addstr(f"{(rawi / 4):6.2f} °C")
 
         case 0x16: # coolant temp
             rawi = int.from_bytes(byte, signed=True)
