@@ -23,6 +23,9 @@ manufacturing stage function check.
 The terminology used here may differ from the manufacturer's
 terminology.
 
+See https://github.com/the1stArchyx/mb124-ac-decoder for the latest
+version.
+
 * Packet format
 
 A whole packet is made of individual 41 bytes as follows:
@@ -59,7 +62,8 @@ See 0x01 above.
 
 Right after switching on ignition this counter counts from 120 (0x78)
 down to 0 once in about 10 minutes, ie. in 5 second steps. The counter
-appears to be used for timing some sort of self-calibration.
+appears to be used for timing some sort of self-calibration. During
+the calibration time the temperature control may seem erratic.
 
 1) At 120 (10 min. left) — ignition was switched on, counter starts.
 2) At 114 (30 s. after, 9 min. 30 s. left) — First self-calibration.
@@ -112,7 +116,8 @@ formula:
 : actual = raw / 5
 
 Negative values bias towards heating and positive values towards
-cooling.
+cooling. The effective range for heating control (see 0x0c) is from
+-50 (-10.0 °C) to +23 (+4.6 °C).
 
 ** 0x0a – temperature control, right                               :internal:
 
@@ -127,32 +132,33 @@ range is from -45 to +34.
 As with most other temperature control bias values, negative values
 bias towards heating and positive values towards cooling.
 
-** 0x0c – heating control bias, left, fast                         :internal:
+** 0x0c – heater drive, left                                       :internal:
 
-This unsigned byte ranges between 0 and 255 (0xff). It is used to bias
-the heating control. 0 calls for no heating and 255 for maximum
-heating.
+This unsigned byte ranges between 0 and 255 (0xff). It is used to
+drive the heating control. 0 calls for no heating and 255 for maximum
+heating. When the target temperature is reached, this value will
+balance around 80 (0x50).
 
-This is the fast-reacting value and seems to directly affect water
-valve control.
+Change of 1 unit (0.2 °C) of temperature differential control value affects
+this value directly about 3-4 units (0.75-1.00 °C).
 
-** 0x0d – heating control bias, right, fast                        :internal:
-
-See 0x0c.
-
-** 0x0e – heating control bias, left, slow                         :internal:
+** 0x0d – heater drive, right                                      :internal:
 
 See 0x0c.
 
-This value follows the value of 0x10 with a dampening. The slowest
-value seems to affect heating valve control via the temperature
-feedback loop.
+** 0x0e – heater feedback reference, left                          :internal:
 
-** 0x0f – heating control bias, right, slow                        :internal:
+See 0x0c.
 
-See 0x0c and 0x0e.
+This value slowly follows the value of 0x0c. This value provides the
+temperature reference for the valve control feedback loop. The actual
+value in °C can be calculated with the following formula:
 
-This value follows the value of 0x11 with a dampening.
+: actual = raw / 4
+
+** 0x0f – heater feedback reference, right                         :internal:
+
+See 0x0e. This one follows the value of 0x0d instead.
 
 ** 0x10 – heating control bias, left, mid                          :internal:
 
@@ -173,12 +179,13 @@ This signed byte ranges between -128 (0x80) and +127 (0x7f). Negative
 values bias towards opening the valve (heating) and positive values
 bias towards closing the valve (cooling).
 
-It seems to be biased primarily by the slow control bias (0x0e) and
-the mixing chamber temprature (0x05).
+It's biased by the heater feedback reference (0x0e) and the mixing
+chamber temprature (0x05).
 
 ** 0x13 – water valve feedback bias, right                         :internal:
 
-See 0x12. For this one the biasing values are from 0x0f and 0x06.
+See 0x12. For this one the biasing values are from 0x0f and 0x06
+instead.
 
 ** 0x14 – water valve solenoid duty cycle, left                      :output:
 
@@ -197,8 +204,7 @@ range. If sensor circuit is shorted, the value will be fixed to -126
 in °C as is.
 
 Engine coolant temperature is used for prevention of overheating of
-the engine, and possibly for some early heater control until the
-engine heats up.
+the engine.
 
 ** 0x17 – evaporator temperature                                      :input:
 
@@ -247,12 +253,12 @@ This bit is set when the control unit operates in intense cooling mode.
 
 This bit is set when the user is making a temperature adjustment. If
 the adjustment is larger than three units (0.6 °C), the control unit
-calculates a damping value for the requested temperature.
+calculates a timer value for the requested temperature.
 
 *** 0x1a bit 4 - user intervention, mode change                    :internal:
 
-This bit is set when the used is making a mode change. Since the bit
-is typically set for a very short time, it is most often never seen to
+This bit is set when the user has made a mode change. Since the bit is
+typically set for a very short time, it is most often never seen to
 change state.
 
 *** 0x1a bit 3 – user intervention, temperature adjustment, left   :internal:
@@ -329,6 +335,9 @@ This bit is set when the relay for radiator blower stage II is
 driven. Radiator blower is started at engine coolant temperature 107
 and switched off at 100.
 
+Radiator blower stage I is controlled by a refrigerant pressure switch
+in the high pressure side of the circuit.
+
 *** 0x1c bit 0 – temp-control for middle dash vents                  :output:
 
 This bit is set when the vacuum valve for middle dash vents
@@ -341,17 +350,20 @@ temperature control flaps is driven.
 
 *** 0x1d bit 7 – recirculation enabled for intense cooling         :internal:
 
-This is typically set two minutes after switching on ignition.
+This has been observerd to be set two minutes after switching on
+ignition.
 
 *** 0x1d bit 6 – self-calibration                                  :internal:
 
 When set, the control unit is performing a self calibration. Water
-recirculation pump is switched off during this time.
+circulation pump is switched off during this time.
 
 *** 0x1d bit 5 – temperature control mode                          :internal:
 
 : 0 = heating
 : 1 = cooling
+
+In the heating mode automatic A/C compressor request is suppressed.
 
 *** 0x1d bit 4 – unused
 
@@ -377,20 +389,32 @@ See 0x1d bit 2
 
 ** 0x1e – temperature dial value, dampened, left                   :internal:
 
-This value follows the value of temperature setting dial. The speed to
-reach the value is defined by 0x1f.
+This value follows the value of temperature setting dial. The stepping
+speed to reach the value is defined by 0x1f in seconds in a manner
+that the target value is reached in about 5 minutes.
+
+For minor changes up to 0.6 °C, or 3 raw units, the timer is not used.
 
 For range, see 0x00.
 
-** 0x1f – control value, temp request value change, left           :internal:
+** 0x1f – time, temperature dial damping, left                     :internal:
 
-When active, ranges between 4 and 75 (0x4b). Otherwise 0.
+When active, this ranges between 4 and 75 (0x4b). It's otherwise 0.
+
+By observation this value is a time in seconds to advance the dampened
+temperature dial value towards the current user requested value.
+
+The temperature change made must be over 0.6 °C, or 3 in raw value to
+trigger the timer. By minimum change of 0.8 °C the time value is set
+to 75 seconds, which results in the target being reached in 4 * 75 =
+300 seconds, or five minutes.
+
 
 ** 0x20 – temperature dial value, dampened, right                  :internal:
 
 See 0x1e.
 
-** 0x21 – control value, temp request value change, right          :internal:
+** 0x21 – time, temperature dial damping, right                    :internal:
 
 See 0x1f.
 
@@ -425,7 +449,7 @@ block is basically 8-N-1 at 4,800 bps with about 30 ms gaps between
 frames. The only major difference to RS-232 or TTL are the signal
 levels used. See the table below:
 
-|       | RS-232    | TTL    | MB     |
+|       | RS-232    | TTL    | MB AC  |
 |-------+-----------+--------+--------|
 | mark  | -15..-3 V | +5.0 V | +8.0 V |
 | space | +3..+15 V | +0.0 V | +0.8 V |
@@ -433,7 +457,7 @@ levels used. See the table below:
 For research purposes the output from the vehicle was converted to TTL
 by means of a simple circuit of diodes and resistors to use an FTDI
 TTL-232R-5V "USB to TTL Serial Cable". This is what the initial
-decoder programs written in Python were designed around.
+decoder program written in Python were designed around.
 
 * Tested vehicles
 
