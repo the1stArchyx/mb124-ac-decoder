@@ -6,9 +6,9 @@ engineering documentation about the format of the data stream and its
 contents is available in ~doc/~. Captures of data streams for offline
 testing are available in ~testdata/~.
 
-Documentation of a known working hardware solution, a simple
+Schematic diagram of a known working hardware solution, a simple
 diode-zener-resistor circuit to convert the 7.2 Vp-p serial data
-signal to TTL, will be added later.
+signal to TTL, is available in ~doc/TTL_adapter_schematic.pdf~.
 
 This is purely a research project and therefore proper support of
 similar commercial solutions cannot be guaranteed. Documentation will
