@@ -18,12 +18,12 @@ bytesource = bytesource[firstsync:-((length - firstsync) % 41)]
 print(f"Loaded {length} bytes. First packet at {firstsync}, full length after trimming {len(bytesource)}.")
 
 index = 1
-bit_status = bytesource[0x1d] & 0x40
+bit_status = bytesource[0x1d] & 0b00100000  # temp control mode
 
 while (index * 41) < len(bytesource):
     
     print("\nHunting for bit change...")
-    while bit_status == bytesource[0x1d + (index * 41)] & 0x40:
+    while bit_status == bytesource[0x1d + (index * 41)] & 0b00100000:
         index += 1
         if (index * 41) >= len(bytesource):
             bit_status = -1
@@ -33,12 +33,13 @@ while (index * 41) < len(bytesource):
         print("End of file reached.")
         exit(0)
 
-    index2 = index - 10
+    index2 = index - 5
     index += 1
+    bit_status = bytesource[0x1d + (index * 41)] & 0b00100000
 
-    for j in range(34):
+    for j in (9, 0xa, 0xb, 0x1d):
         datastr = f"{j:02x}:"
-        for i in range(index2, index2 + 22):
+        for i in range(index2, index2 + 11):
             datastr += f" {bytesource[i * 41 + j]:02x}"
         print(datastr)
 

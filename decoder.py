@@ -581,15 +581,16 @@ def printByte(outwin, msg_pad, byte, ticker):
 
         case 0x0b: # exterior temp bias
             rawi = int.from_bytes(byte, signed=True)
-            if (rawi < 0):
+            if (rawi < -15):
                 colour = curses.color_pair(2)
-            elif (rawi > 0):
+            elif (rawi > -14):
                 colour = curses.color_pair(1)
             else:
                 colour = curses.color_pair(4)
             outwin.addstr(getLine(ticker), getCol(ticker), f"{rawi:4d} = ")
-            outwin.addstr(f"{(rawi / 5):5.1f} °C ", colour)
-            outwin.addstr(f"{(rawi / 4):6.2f} °C")
+#            outwin.addstr(f"{(-1 * ((rawi * 5) + 70) / 50):5.1f} °C ", colour)
+            outwin.addstr(f"{(-1 * (((rawi + 1) // 2) + 7) / 5):5.1f} °C ", colour)
+            outwin.addstr(f"{(rawi / 5):5.1f} °C")
 
         case 0x16: # coolant temp
             rawi = int.from_bytes(byte, signed=True)

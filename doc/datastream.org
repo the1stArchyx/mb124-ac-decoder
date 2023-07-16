@@ -121,7 +121,7 @@ formula:
 
 Negative values bias towards heating and positive values towards
 cooling. The effective range for heating control (see 0x0c) is from
--50 (-10.0 °C) to +23 (+4.6 °C).
+-50 (0xce, -10.0 °C) to +23 (0x17, +4.6 °C).
 
 ** 0x0a – temperature control, right                               :internal:
 
@@ -365,10 +365,14 @@ circulation pump is switched off during this time.
 
 *** 0x1d bit 5 – temperature control mode                          :internal:
 
+If left and right control values (0x09 and 0x0a) are roughly the same,
+the temperature control switches to cooling when the values go above
++3 and heating when the values go below -8 (0xf8).
+
 : 0 = heating
 : 1 = cooling
 
-In the heating mode automatic A/C compressor request is suppressed.
+In the heating mode automatic A/C compressor request is inhibited.
 
 *** 0x1d bit 4 – unused
 
@@ -483,3 +487,34 @@ conditioning, SA code 581.
 
 - 124.131 – E 300 DIESEL (US version, SA code 494; facelift) – no data
   stream)
+
+
+* Unfinished analysis notes
+
+This section contains notes of observations that aren't necessarily
+definitive at this point. Some of it may be correct, but much will be
+incorrect guesses.
+
+
+** 0x0b – exterior temperature bias
+
+The value appears to bias temperature adjustment targets from actual
+dial values as well as water valve feedback control.
+
+For water valve control the bias temperature seems to be ~raw / 5~,
+but it needs to be verified.
+
+The following observation appears to be correct only if both
+temperature dials are set at the same value! Whether the temperature
+control is functioning in heating or cooling mode may also skew the
+values. Self-calibration can also break logic, as two different data
+captures seem to show offsetting.
+
+For adjustment targets the no bias spot is at -14/-15 (0xf2/0xf3). To
+calculate the amount to shift from user-requested temperature to
+adjustment target, use the following formula (// = integer division):
+
+: adjustment target bias = -1 * (((ext.temp bias + 1) // 2) + 7)
+
+If you want the actual temperature difference value in °C, divide the
+above raw value by 5.
