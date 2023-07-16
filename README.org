@@ -2,16 +2,24 @@
 
 This crude Python program decodes the data stream output from some air
 conditioner control units used in Mercedes-Benz model 124. Reverse
-engineering documentation about the data stream format and contents is
-available in doc/. Captures of data streams for offline testing are
-available in testdata/.
+engineering documentation about the format of the data stream and its
+contents is available in ~doc/~. Captures of data streams for offline
+testing are available in ~testdata/~.
 
 Documentation of a known working hardware solution, a simple
 diode-zener-resistor circuit to convert the 7.2 Vp-p serial data
 signal to TTL, will be added later.
 
-This is purely a research project and therefore proper support cannot
-be guaranteed and documentation will most likely be limited.
+This is purely a research project and therefore proper support of
+similar commercial solutions cannot be guaranteed. Documentation will
+most likely be limited.
+
+Also, /this program is not a fault code scanner/. The few modules
+supported by this software do not have a known functionality at the
+control unit to read fault codes through the serial interface.
+However, the same diagnostic connector can be used to switch the
+module to a diagnostic mode to read pulse codes with a pulse counter
+or an LED.
 
 Suggestions for improvement may be done by submitting an issue.
 
