@@ -1,7 +1,8 @@
 #!/bin/python3
 import argparse
 
-parser = argparse.ArgumentParser(description="program to hunt minimum and maximum data values from MB 124 A/C data stream captures")
+parser = argparse.ArgumentParser(description="program to hunt minimum and maximum data values from MB 124 A/C data stream captures",
+                                 epilog="Modify the program to change its function.")
 parser.add_argument("filename", help="name of file read")
 args = parser.parse_args()
 

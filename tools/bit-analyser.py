@@ -1,8 +1,14 @@
 #!/bin/python3
+import argparse
+
+parser = argparse.ArgumentParser(description="program to hunt bit changes from MB 124 A/C data stream captures",
+                                 epilog="Modify the program to change its function.")
+parser.add_argument("filename", help="name of file read")
+args = parser.parse_args()
 
 sync_bytes = b"\x00\x03\x04\x01\x23\x02\x3b"
 
-with open("driving.bin", "rb") as sourcefile:
+with open(args.filename, "rb") as sourcefile:
     bytesource = sourcefile.read()
 
 firstsync = bytesource.find(sync_bytes) + 7
