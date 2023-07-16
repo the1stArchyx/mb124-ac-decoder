@@ -9,6 +9,7 @@ testing are available in ~testdata/~.
 Schematic diagram of a known working hardware solution, a simple
 diode-zener-resistor circuit to convert the 7.2 Vp-p serial data
 signal to TTL, is available in ~doc/TTL_adapter_schematic.pdf~.
+Additionally an FTDI TTL-232R-5V USB serial cable is required.
 
 This is purely a research project and therefore proper support of
 similar commercial solutions cannot be guaranteed. Documentation will
