@@ -378,7 +378,11 @@ circulation pump is switched off during this time.
 
 If left and right control values (0x09 and 0x0a) are roughly the same,
 the temperature control switches to cooling when the values go above
-+3 and heating when the values go below -8 (0xf8).
++3 (+0.6 °C) and heating when the values go below -8 (0xf8, -1.6 °C).
+
+It has been observed that with a temperature setting difference of
+1.0 °C both control values must go down to -8 before mode is switched
+to heating.
 
 : 0 = heating
 : 1 = cooling
