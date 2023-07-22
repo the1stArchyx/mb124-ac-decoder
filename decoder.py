@@ -89,8 +89,8 @@ labels = ((0b01, ( 2, xLeftLabel,  "Temp dial  . . . . :", 21)), # 0x00 - temp d
           (0b01, (23, xRightLabel, "Self-cal. timer  . :", 21)), # 0x04 - self-calibration timer a.k.a. switch-on countdown, ~10 minutes
           (0b01, (18, xLeftLabel,  "Mixing chamber temp:", 22)), # 0x05 - left
           (0b00, (18, xLeftLabel,  ""                    , 34)), # 0x06 - right
-          (0b01, ( 6, xLeftLabel,  "Interior temp  . . :", 21)), # 0x07 - interior temp, raw
-          (0b01, (15, xRightLabel, "Exterior temp  . . :", 21)), # 0x08 - exterior temp
+          (0b01, ( 6, xLeftLabel,  "Interior air temp  :", 21)), # 0x07 - interior temp, raw
+          (0b01, (15, xRightLabel, "Exterior air temp  :", 21)), # 0x08 - exterior temp
           (0b01, (11, xLeftLabel,  "Control (temp diff):", 21)), # 0x09 - left temp control bias
           (0b00, (11, xLeftLabel,  ""                    , 33)), # 0x0a - right temp control bias
           (0b01, (12, xLeftLabel,  "Ext. temp. bias  . :", 21)), # 0x0b - exterior/interior temp control bias
@@ -114,7 +114,7 @@ labels = ((0b01, ( 2, xLeftLabel,  "Temp dial  . . . . :", 21)), # 0x00 - temp d
                   ( 1, xLeftLabel,  ""                    , 21), # 0x1a/3 - user temp adjustment, left
                   ( 3, xRightLabel, "Mode change, user  :", 21), # 0x1a/4 - this is occasionally briefly set when changing modes
                   ( 1, xLeftLabel,  ""                    , 33), # 0x1a/5 - user temp adjustment, right
-                  ( 5, xRightLabel, "Fast cooling mode  :", 21), # 0x1a/6 - fast cooling mode
+                  ( 5, xRightLabel, "Intense cooling  . :", 21), # 0x1a/6 - intense cooling mode
                   (25, xLeftLabel,  "0x1a / 7 . . . . . :", 21), # 0x1a/7
                   )
            ),
@@ -136,7 +136,7 @@ labels = ((0b01, ( 2, xLeftLabel,  "Temp dial  . . . . :", 21)), # 0x00 - temp d
                   (28, xLeftLabel,  "0x1d / 4 . . . . . :", 21), # 0x1d/4
                   (11, xRightLabel, "Temp control mode  :", 21), # 0x1d/5 - control mode: 0 = heating; 1 = cooling
                   (22, xRightLabel, "Self-calibration . :", 21), # 0x1d/6 - self-calibration
-                  ( 6, xRightLabel, "^^ recirculation . :", 21), # 0x1d/7 - cooling mode auto-recirculation
+                  ( 6, xRightLabel, "^^ recirculation . :", 21), # 0x1d/7 - intense cooling mode auto-recirculation
                   )
            ),
           (0b01, ( 3, xLeftLabel,  "^^ dampened  . . . :", 21)), # 0x1e - temp dial, left
@@ -180,12 +180,24 @@ def getLine(ticker, bit=0):
 def updateAdjTargetDeltas(outwin):
     leftDelta = int.from_bytes(byte_cache[1], signed=True) - int.from_bytes(byte_cache[0], signed=True)
     rightDelta = int.from_bytes(byte_cache[3], signed=True) - int.from_bytes(byte_cache[2], signed=True)
-    outwin.addstr(getLine(1) + 1, getCol(1), f"{leftDelta:+3d} {(leftDelta / 5):+5.1f}°  {rightDelta:+3d} {(rightDelta / 5):+5.1f}°")
+    outwin.addstr(getLine(1) + 1,
+                  getCol(1),
+                  f"{leftDelta:+3d} {(leftDelta / 5):+5.1f}°  {rightDelta:+3d} {(rightDelta / 5):+5.1f}°", curses.color_pair(5))
 
 
 def updateExtTempBiasDelta(outwin):
     extTempBiasDelta = int.from_bytes(byte_cache[0x08], signed=True) - int.from_bytes(byte_cache[0xb], signed=True)
-    outwin.addstr(getLine(0xb) + 1,  getCol(0xb), f"{extTempBiasDelta:4d} / {(50 - extTempBiasDelta):+4d}")
+    outwin.addstr(getLine(0xb) + 1,
+                  getCol(0xb),
+                  f"{extTempBiasDelta:4d} / {(50 - extTempBiasDelta):+4d}", curses.color_pair(5))
+
+
+def updateMixChamberTempDelta(outwin):
+    leftDelta = int.from_bytes(byte_cache[0xe]) - int.from_bytes(byte_cache[5])
+    rightDelta = int.from_bytes(byte_cache[0xf]) - int.from_bytes(byte_cache[6])
+    outwin.addstr(getLine(5) + 1,
+                  getCol(5) - 1,
+                  f"{leftDelta:+4d} {(leftDelta - 11):+4d}   {rightDelta:+4d} {(rightDelta - 11):+4d}", curses.color_pair(5))
 
 
 def printByte(outwin, msg_pad, byte, ticker):
@@ -280,26 +292,30 @@ def printByte(outwin, msg_pad, byte, ticker):
             rawi = int.from_bytes(byte, signed=True)
             outwin.addstr(getLine(ticker), getCol(ticker), f"{(rawi / 2):6.1f} °C  ({rawi:4d})")
 
-        case 0x09:  # left temp control bias
+        case 0x09:  # left temp control
             signed = int.from_bytes(byte, signed=True)
-            if (signed < -50):
+            if (signed < -50) or (signed > 23):
+                colour = curses.color_pair(3)
+            elif (signed < -7):
                 colour = curses.color_pair(2)
-            elif (signed > 23):
+            elif (signed > 2):
                 colour = curses.color_pair(1)
             else:
-                colour = curses.color_pair(4)
-            outwin.addstr(getLine(ticker),  getCol(ticker), f"{signed:4d} ", colour)
+                colour = curses.A_BOLD
+            outwin.addstr(getLine(ticker),  getCol(ticker), f"{signed:+4d} ", colour)
             outwin.addstr(f"{(signed / 5):+5.1f}°")
 
-        case 0x0a:  # right temp control bias
+        case 0x0a:  # right temp control
             signed = int.from_bytes(byte, signed=True)
-            if (signed < -50):
+            if (signed < -50) or (signed > 23):
+                colour = curses.color_pair(3)
+            elif (signed < -7):
                 colour = curses.color_pair(2)
-            elif (signed > 23):
+            elif (signed > 2):
                 colour = curses.color_pair(1)
             else:
-                colour = curses.color_pair(4)
-            outwin.addstr(getLine(ticker),  getCol(ticker), f"{signed:4d} ", colour)
+                colour = curses.A_BOLD
+            outwin.addstr(getLine(ticker),  getCol(ticker), f"{signed:+4d} ", colour)
             outwin.addstr(f"{(signed / 5):+5.1f}°")
 
         case 0x0b: # exterior temp bias
@@ -310,10 +326,10 @@ def printByte(outwin, msg_pad, byte, ticker):
                 colour = curses.color_pair(1)
             else:
                 colour = curses.color_pair(4)
-            outwin.addstr(getLine(ticker), getCol(ticker), f"{rawi:4d} = ")
+            outwin.addstr(getLine(ticker), getCol(ticker), f"{rawi:+4d} = ")
 #            outwin.addstr(f"{(-1 * ((rawi * 5) + 70) / 50):5.1f} °C ", colour)
-            outwin.addstr(f"{(-1 * (((rawi + 1) // 2) + 7) / 5):5.1f} °C ", colour)
-            outwin.addstr(f"{(rawi / 5):5.1f} °C")
+            outwin.addstr(f"{(-1 * (((rawi + 1) // 2) + 7) / 5):+5.1f} °C ", colour)
+            outwin.addstr(f"{(rawi / 5):+5.1f} °C")
             updateExtTempBiasDelta(outwin)
 
         case 0x0c:  # left heater drive
@@ -341,6 +357,7 @@ def printByte(outwin, msg_pad, byte, ticker):
 
         case 0x0f:  # right, slow
             outwin.addstr(getLine(ticker), getCol(ticker), f" {byte[0]:3d} {(byte[0] / 4):6.2f}°")
+            updateMixChamberTempDelta(outwin)
 
         case 0x10:  # left, mid
             outwin.addstr(getLine(ticker),  getCol(ticker), f" {byte[0]:3d} {(byte[0] - 80):4d}")
@@ -348,7 +365,7 @@ def printByte(outwin, msg_pad, byte, ticker):
         case 0x11:  # right, mid
             outwin.addstr(getLine(ticker), getCol(ticker), f" {byte[0]:3d} {(byte[0] - 80):4d}")
 
-        case 0x12:  # left valve control bias
+        case 0x12:  # left valve control bias (feedback)
             signed = int.from_bytes(byte, signed=True)
             if (signed < 0):
                 colour = curses.color_pair(2)
@@ -356,9 +373,9 @@ def printByte(outwin, msg_pad, byte, ticker):
                 colour = curses.color_pair(1)
             else:
                 colour = curses.color_pair(4)
-            outwin.addstr(getLine(ticker),  getCol(ticker) + 3, f"{signed:4d} ", colour)
+            outwin.addstr(getLine(ticker),  getCol(ticker) + 2, f"{signed:+5d} ", colour)
 
-        case 0x13:  # right valve control bias
+        case 0x13:  # right valve control bias (feedback)
             signed = int.from_bytes(byte, signed=True)
             if (signed < 0):
                 colour = curses.color_pair(2)
@@ -366,7 +383,7 @@ def printByte(outwin, msg_pad, byte, ticker):
                 colour = curses.color_pair(1)
             else:
                 colour = curses.color_pair(4)
-            outwin.addstr(getLine(ticker), getCol(ticker) + 3, f"{signed:4d} ", colour)
+            outwin.addstr(getLine(ticker), getCol(ticker) + 2, f"{signed:+5d} ", colour)
 
         case 0x14:  # left duty cycle
             colour = 0
@@ -374,7 +391,7 @@ def printByte(outwin, msg_pad, byte, ticker):
                 colour = curses.color_pair(1)
             elif byte == b"\xff":
                 colour = curses.color_pair(2)
-            outwin.addstr(getLine(ticker),  getCol(ticker) + 1, f"{int.from_bytes(byte):3d} {makePercent(byte):4d}% ", colour)
+            outwin.addstr(getLine(ticker),  getCol(ticker), f"{int.from_bytes(byte):4d} {makePercent(byte):4d}% ", colour)
 
         case 0x15:  # right duty cycle
             colour = 0
@@ -382,7 +399,7 @@ def printByte(outwin, msg_pad, byte, ticker):
                 colour = curses.color_pair(1)
             elif byte == b"\xff":
                 colour = curses.color_pair(2)
-            outwin.addstr(getLine(ticker), getCol(ticker) + 1, f"{int.from_bytes(byte):3d} {makePercent(byte):4d}% ", colour)
+            outwin.addstr(getLine(ticker), getCol(ticker), f"{int.from_bytes(byte):4d} {makePercent(byte):4d}% ", colour)
 
         case 0x16: # coolant temp
             rawi = int.from_bytes(byte, signed=True)
@@ -759,6 +776,7 @@ def main (stdscr):
     curses.init_pair(2, curses.COLOR_WHITE, curses.COLOR_RED)
     curses.init_pair(3, curses.COLOR_BLACK, curses.COLOR_YELLOW)
     curses.init_pair(4, curses.COLOR_BLACK, curses.COLOR_GREEN)
+    curses.init_pair(5, curses.COLOR_CYAN, curses.COLOR_BLACK)
 
     stdscr.clear()
     stdscr.border()
