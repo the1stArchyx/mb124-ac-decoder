@@ -706,6 +706,8 @@ def mainLoop (stdscr):
                 stdscr.refresh()
                 while (sync < len(sync_bytes)):
                     byte = readFByte(bytesource, stdscr)
+                    if (stdscr.getch() == ord("q")):  #  This is here only to not get stuck in this loop!
+                        return                        #  Maybe it should be rethought at some point..?
                     if (byte == sync_bytes[sync]):
                         sync += 1
                     else:
