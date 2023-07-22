@@ -39,6 +39,12 @@ sync_hits  = [0,       0,       0,       0,       0,       0,       0]
 
 statuses = dict(circmode=0, fastcool=False, middleventbypass=False, selfcal=False, tempmode=False, waterpump=False)
 
+# List of cached bytes, each byte of a packet is copied to this list
+# for caching. This enables experimental comparation of different
+# values, eg. the difference of Adjustment Target and Temperature Dial
+# to compare with Exterior Temperature Bias.
+byte_cache = [b"\x00"] * 0x22
+
 ticker_line = 1
 ticker_col = 22
 
@@ -171,65 +177,256 @@ def getLine(ticker, bit=0):
         return labels[ticker][1][0]
 
 
+def updateAdjTargetDeltas(outwin):
+    leftDelta = int.from_bytes(byte_cache[1], signed=True) - int.from_bytes(byte_cache[0], signed=True)
+    rightDelta = int.from_bytes(byte_cache[3], signed=True) - int.from_bytes(byte_cache[2], signed=True)
+    outwin.addstr(getLine(1) + 1, getCol(1), f"{leftDelta:+3d} {(leftDelta / 5):+5.1f}°  {rightDelta:+3d} {(rightDelta / 5):+5.1f}°")
+
+
+def updateExtTempBiasDelta(outwin):
+    extTempBiasDelta = int.from_bytes(byte_cache[0x08], signed=True) - int.from_bytes(byte_cache[0xb], signed=True)
+    outwin.addstr(getLine(0xb) + 1,  getCol(0xb), f"{extTempBiasDelta:4d} / {(50 - extTempBiasDelta):+4d}")
+
+
 def printByte(outwin, msg_pad, byte, ticker):
     match ticker:
-        case 0x1d:  # defrost/max cool
-            bits = int.from_bytes(byte)
-            if (bits & 0x01):   # bit 0
-                outwin.addstr(getLine(ticker, 0), getCol(ticker, 0), " Max cold ", curses.color_pair(1))
-            elif (bits & 0x02): # bit 1
-                outwin.addstr(getLine(ticker, 1), getCol(ticker, 1), " Defrost  ", curses.color_pair(2))
-            elif (bits & 0x03): # bits 0 and 1 should never be set at the same time!
-                outwin.addstr(getLine(ticker, 0), getCol(ticker, 0), "( ?????? )")
-            else:
-                outwin.addstr(getLine(ticker, 0), getCol(ticker, 0), "Controlled")
-
-            if (bits & 0x04):   # bit 2
-                outwin.addstr(getLine(ticker, 2), getCol(ticker, 2), " Max cold ", curses.color_pair(1))
-            elif (bits & 0x08): # bit 3
-                outwin.addstr(getLine(ticker, 3), getCol(ticker, 3), " Defrost  ", curses.color_pair(2))
-            elif (bits & 0x0c): # bits 2 and 3 should never be set at the same time!
-                outwin.addstr(getLine(ticker, 2), getCol(ticker, 2), "( ?????? )")
-            else:
-                outwin.addstr(getLine(ticker, 2), getCol(ticker, 2), "Controlled")
-
-            if (bits & 0x40):   # bit 6 - self-cal
-                outwin.addstr(getLine(ticker, 6), getCol(ticker, 6), "  on ", curses.color_pair(3))
-                if not statuses["selfcal"]:
-                    statuses["selfcal"] = True
-                    msg_pad.addstr(logtime() + "Self-calibration on.\n")
-            else:
-                outwin.addstr(getLine(ticker, 6), getCol(ticker, 6), " off ")
-                if statuses["selfcal"]:
-                    statuses["selfcal"] = False
-                    msg_pad.addstr(logtime() + "Self-calibration off.\n")
-
-
-            if (bits & 0x20):   # bit 5 - temperature maintaining mode
+        case 0x00:  # left dial
+            # dial value background colours by raw value: blue/white
+            # changeover whould be at -28, white/red changeover should
+            # be at 0; ie. blue  <-28; white -28<0; red >0
+            rawi = int.from_bytes(byte, signed=True)
+            if rawi < -33:
                 colour = curses.color_pair(1)
-                status = " cooling "
-                if not statuses["tempmode"]:
-                    statuses["tempmode"] = True
-                    msg_pad.addstr(logtime() + "Temperature control mode: cooling.\n")
-            else:
+            elif rawi > -1:
                 colour = curses.color_pair(2)
-                status = " heating "
-                if statuses["tempmode"]:
-                    statuses["tempmode"] = False
-                    msg_pad.addstr(logtime() + "Temperature control mode: heating.\n")
-            outwin.addstr(getLine(ticker, 5), getCol(ticker, 5), status, colour)
-
-            if (bits & 0x10):   # bit 4
-                status = "1 /   set"
             else:
-                status = "0 / unset"
-            outwin.addstr(getLine(ticker, 4), getCol(ticker, 4), status)
+                colour = curses.A_REVERSE
+            actualf = (rawi + 126) / 5
+            outwin.addstr(getLine(ticker), getCol(ticker), f"{rawi:3d} ")
+            outwin.addstr(f"{actualf:5.1f}° ", colour)
 
-            if (bits & 0x80):   # bit 7 - fast cooling recirculation
-                status = " enabled"
+        case 0x01:  # left bias - temperature adjustment target
+            actualf = (int.from_bytes(byte, signed=True) + 126) / 5
+            outwin.addstr(getLine(ticker), getCol(ticker), f"{int.from_bytes(byte, signed=True):3d} ")
+            outwin.addstr(f"{actualf:5.1f}°")
+
+        case 0x02:  # right dial
+            rawi = int.from_bytes(byte, signed=True)
+            if rawi < -33:
+                colour = curses.color_pair(1)
+            elif rawi > -1:
+                colour = curses.color_pair(2)
             else:
-                status = " off    "
-            outwin.addstr(getLine(ticker, 7), getCol(ticker, 7), status)
+                colour = curses.A_REVERSE
+            actualf = (rawi + 126) / 5
+            outwin.addstr(getLine(ticker), getCol(ticker), f"{rawi:3d} ")
+            outwin.addstr(f"{actualf:5.1f}° ", colour)
+
+        case 0x03:  # right bias - temperature adjustment target
+            actualf = (int.from_bytes(byte, signed=True) + 126) / 5
+            outwin.addstr(getLine(ticker), getCol(ticker), f"{int.from_bytes(byte, signed=True):3d} ")
+            outwin.addstr(f"{actualf:5.1f}°")
+            updateAdjTargetDeltas(outwin)
+
+        case 0x04: # self-calibration timer a.k.a. switch-on countdown
+            rawi = int.from_bytes(byte)
+            seconds = (rawi % 12) * 5
+            minutes = rawi // 12
+            colour = 0
+            if rawi:
+                colour = curses.color_pair(3)
+            outwin.addstr(getLine(ticker), getCol(ticker), f"{rawi:4d} ", colour)
+            if rawi:
+                outwin.addstr(f"  {minutes:2d} min. {seconds:2d} s")
+            else:
+                outwin.addstr("               ")
+
+        case 0x05:  # mixing chamber temp, left
+            rawi = int.from_bytes(byte)
+            tempf = (rawi + 40) / 4
+            colour = 0
+            if not rawi:
+                colour = curses.color_pair(1)
+            elif rawi > 242:
+                colour = curses.color_pair(2)
+            outwin.addstr(getLine(ticker), getCol(ticker), f"{rawi:3d} ")
+            outwin.addstr(f"{tempf:6.2f}° ", colour)
+
+        case 0x06:  # mixing chamber temp, right
+            rawi = int.from_bytes(byte)
+            tempf = (rawi + 40) / 4
+            colour = 0
+            if not rawi:
+                colour = curses.color_pair(1)
+            elif rawi > 242:
+                colour = curses.color_pair(2)
+            outwin.addstr(getLine(ticker), getCol(ticker), f"{rawi:3d} ")
+            outwin.addstr(f"{tempf:6.2f}° ", colour)
+
+        case 0x07: # interior temp, raw
+            rawi = int.from_bytes(byte, signed=True)
+            tempf = (rawi + 126) / 5
+            colour = 0
+            if (rawi < -127) or (rawi > 125):
+                colour = curses.color_pair(3)
+            elif (rawi < -56):
+                colour = curses.color_pair(1)
+            elif (rawi > 24):
+                colour = curses.color_pair(2)
+            outwin.addstr(getLine(ticker), getCol(ticker), f"{rawi:4d} = ")
+            outwin.addstr(f"{tempf:5.1f} °C ", colour)
+
+        case 0x08: # exterior temp
+            rawi = int.from_bytes(byte, signed=True)
+            outwin.addstr(getLine(ticker), getCol(ticker), f"{(rawi / 2):6.1f} °C  ({rawi:4d})")
+
+        case 0x09:  # left temp control bias
+            signed = int.from_bytes(byte, signed=True)
+            if (signed < -50):
+                colour = curses.color_pair(2)
+            elif (signed > 23):
+                colour = curses.color_pair(1)
+            else:
+                colour = curses.color_pair(4)
+            outwin.addstr(getLine(ticker),  getCol(ticker), f"{signed:4d} ", colour)
+            outwin.addstr(f"{(signed / 5):+5.1f}°")
+
+        case 0x0a:  # right temp control bias
+            signed = int.from_bytes(byte, signed=True)
+            if (signed < -50):
+                colour = curses.color_pair(2)
+            elif (signed > 23):
+                colour = curses.color_pair(1)
+            else:
+                colour = curses.color_pair(4)
+            outwin.addstr(getLine(ticker),  getCol(ticker), f"{signed:4d} ", colour)
+            outwin.addstr(f"{(signed / 5):+5.1f}°")
+
+        case 0x0b: # exterior temp bias
+            rawi = int.from_bytes(byte, signed=True)
+            if (rawi < -15):
+                colour = curses.color_pair(2)
+            elif (rawi > -14):
+                colour = curses.color_pair(1)
+            else:
+                colour = curses.color_pair(4)
+            outwin.addstr(getLine(ticker), getCol(ticker), f"{rawi:4d} = ")
+#            outwin.addstr(f"{(-1 * ((rawi * 5) + 70) / 50):5.1f} °C ", colour)
+            outwin.addstr(f"{(-1 * (((rawi + 1) // 2) + 7) / 5):5.1f} °C ", colour)
+            outwin.addstr(f"{(rawi / 5):5.1f} °C")
+            updateExtTempBiasDelta(outwin)
+
+        case 0x0c:  # left heater drive
+            if (byte[0] < 80):
+                colour = curses.color_pair(1)
+            elif (byte[0] > 80):
+                colour = curses.color_pair(2)
+            else:
+                colour = curses.color_pair(4)
+            outwin.addstr(getLine(ticker),  getCol(ticker), f" {byte[0]:3d} ", colour)
+            outwin.addstr(f"{(byte[0] - 80):4d}")
+
+        case 0x0d:  # right heater drive
+            if (byte[0] < 80):
+                colour = curses.color_pair(1)
+            elif (byte[0] > 80):
+                colour = curses.color_pair(2)
+            else:
+                colour = curses.color_pair(4)
+            outwin.addstr(getLine(ticker),  getCol(ticker), f" {byte[0]:3d} ", colour)
+            outwin.addstr(f"{(byte[0] - 80):4d}")
+
+        case 0x0e:  # left, slow
+            outwin.addstr(getLine(ticker),  getCol(ticker), f" {byte[0]:3d} {(byte[0] / 4):6.2f}°")
+
+        case 0x0f:  # right, slow
+            outwin.addstr(getLine(ticker), getCol(ticker), f" {byte[0]:3d} {(byte[0] / 4):6.2f}°")
+
+        case 0x10:  # left, mid
+            outwin.addstr(getLine(ticker),  getCol(ticker), f" {byte[0]:3d} {(byte[0] - 80):4d}")
+
+        case 0x11:  # right, mid
+            outwin.addstr(getLine(ticker), getCol(ticker), f" {byte[0]:3d} {(byte[0] - 80):4d}")
+
+        case 0x12:  # left valve control bias
+            signed = int.from_bytes(byte, signed=True)
+            if (signed < 0):
+                colour = curses.color_pair(2)
+            elif (signed > 0):
+                colour = curses.color_pair(1)
+            else:
+                colour = curses.color_pair(4)
+            outwin.addstr(getLine(ticker),  getCol(ticker) + 3, f"{signed:4d} ", colour)
+
+        case 0x13:  # right valve control bias
+            signed = int.from_bytes(byte, signed=True)
+            if (signed < 0):
+                colour = curses.color_pair(2)
+            elif (signed > 0):
+                colour = curses.color_pair(1)
+            else:
+                colour = curses.color_pair(4)
+            outwin.addstr(getLine(ticker), getCol(ticker) + 3, f"{signed:4d} ", colour)
+
+        case 0x14:  # left duty cycle
+            colour = 0
+            if byte == b"\x00":
+                colour = curses.color_pair(1)
+            elif byte == b"\xff":
+                colour = curses.color_pair(2)
+            outwin.addstr(getLine(ticker),  getCol(ticker) + 1, f"{int.from_bytes(byte):3d} {makePercent(byte):4d}% ", colour)
+
+        case 0x15:  # right duty cycle
+            colour = 0
+            if byte == b"\x00":
+                colour = curses.color_pair(1)
+            elif byte == b"\xff":
+                colour = curses.color_pair(2)
+            outwin.addstr(getLine(ticker), getCol(ticker) + 1, f"{int.from_bytes(byte):3d} {makePercent(byte):4d}% ", colour)
+
+        case 0x16: # coolant temp
+            rawi = int.from_bytes(byte, signed=True)
+            colour = 0
+            if rawi < 6:
+                colour = curses.color_pair(1)
+            elif rawi < 0:
+                colour = curses.color_pair(3)
+            elif rawi > 107:
+                colour = curses.color_pair(2)
+            outwin.addstr(getLine(ticker), getCol(ticker), f"{rawi:4d} ", colour)
+            outwin.addstr(f"  °C")
+
+        case 0x17: # evaporator temp
+            rawi = int.from_bytes(byte, signed=True)
+            tempf = rawi / 2
+            colour = 0
+            if not tempf:
+                colour = curses.color_pair(1)
+            elif rawi > 125:
+                colour = curses.color_pair(2)
+            outwin.addstr(getLine(ticker), getCol(ticker), f"{tempf:6.1f} ", colour)
+            outwin.addstr(f"°C  ({rawi:4d})")
+
+        case 0x18: # overheat protection status
+            st = int.from_bytes(byte)
+            colour = 0
+            if st:
+                colour = curses.color_pair(2)
+            outwin.addstr(getLine(ticker), getCol(ticker), f"{st:4d} ", colour)
+            outwin.addstr(f" (0x{st:02x})")
+
+        case 0x19: # interior temp, dampened
+            rawi = int.from_bytes(byte, signed=True)
+            tempf = (rawi + 126) / 5
+            colour = 0
+            if (rawi < -127) or (rawi > 125):
+                colour = curses.color_pair(3)
+            elif (rawi < -56):
+                colour = curses.color_pair(1)
+            elif (rawi > 24):
+                colour = curses.color_pair(2)
+            outwin.addstr(getLine(ticker), getCol(ticker), f"{rawi:4d} = ")
+            outwin.addstr(f"{tempf:5.1f} °C ", colour)
 
         case 0x1a:  # dial adjustment status
             bits = int.from_bytes(byte)
@@ -285,6 +482,13 @@ def printByte(outwin, msg_pad, byte, ticker):
             else:
                 status = "0 / unset"
             outwin.addstr(getLine(ticker, 7), getCol(ticker, 7), status)
+
+        case 0x1b: # recirculation timer
+            rawi = int.from_bytes(byte)
+            colour = 0
+            if rawi:
+                colour = curses.color_pair(4)
+            outwin.addstr(getLine(ticker), getCol(ticker), f"{rawi:4d} ", colour)
 
         case 0x1c:  # A/C status bits
             bits = int.from_bytes(byte)
@@ -351,25 +555,63 @@ def printByte(outwin, msg_pad, byte, ticker):
                     statuses["waterpump"] = False
                     msg_pad.addstr(logtime() + "Water circulation pump off.\n")
 
-        case 0x00:  # left dial
-            # dial value background colours by raw value: blue/white
-            # changeover whould be at -28, white/red changeover should
-            # be at 0; ie. blue  <-28; white -28<0; red >0
-            rawi = int.from_bytes(byte, signed=True)
-            if rawi < -33:
-                colour = curses.color_pair(1)
-            elif rawi > -1:
-                colour = curses.color_pair(2)
+        case 0x1d:  # defrost/max cool
+            bits = int.from_bytes(byte)
+            if (bits & 0x01):   # bit 0
+                outwin.addstr(getLine(ticker, 0), getCol(ticker, 0), " Max cold ", curses.color_pair(1))
+            elif (bits & 0x02): # bit 1
+                outwin.addstr(getLine(ticker, 1), getCol(ticker, 1), " Defrost  ", curses.color_pair(2))
+            elif (bits & 0x03): # bits 0 and 1 should never be set at the same time!
+                outwin.addstr(getLine(ticker, 0), getCol(ticker, 0), "( ?????? )")
             else:
-                colour = curses.A_REVERSE
-            actualf = (rawi + 126) / 5
-            outwin.addstr(getLine(ticker), getCol(ticker), f"{rawi:3d} ")
-            outwin.addstr(f"{actualf:5.1f}° ", colour)
+                outwin.addstr(getLine(ticker, 0), getCol(ticker, 0), "Controlled")
 
-        case 0x01:  # left bias - temperature adjustment target
-            actualf = (int.from_bytes(byte, signed=True) + 126) / 5
-            outwin.addstr(getLine(ticker), getCol(ticker), f"{int.from_bytes(byte, signed=True):3d} ")
-            outwin.addstr(f"{actualf:5.1f}°")
+            if (bits & 0x04):   # bit 2
+                outwin.addstr(getLine(ticker, 2), getCol(ticker, 2), " Max cold ", curses.color_pair(1))
+            elif (bits & 0x08): # bit 3
+                outwin.addstr(getLine(ticker, 3), getCol(ticker, 3), " Defrost  ", curses.color_pair(2))
+            elif (bits & 0x0c): # bits 2 and 3 should never be set at the same time!
+                outwin.addstr(getLine(ticker, 2), getCol(ticker, 2), "( ?????? )")
+            else:
+                outwin.addstr(getLine(ticker, 2), getCol(ticker, 2), "Controlled")
+
+            if (bits & 0x40):   # bit 6 - self-cal
+                outwin.addstr(getLine(ticker, 6), getCol(ticker, 6), "  on ", curses.color_pair(3))
+                if not statuses["selfcal"]:
+                    statuses["selfcal"] = True
+                    msg_pad.addstr(logtime() + "Self-calibration on.\n")
+            else:
+                outwin.addstr(getLine(ticker, 6), getCol(ticker, 6), " off ")
+                if statuses["selfcal"]:
+                    statuses["selfcal"] = False
+                    msg_pad.addstr(logtime() + "Self-calibration off.\n")
+
+
+            if (bits & 0x20):   # bit 5 - temperature maintaining mode
+                colour = curses.color_pair(1)
+                status = " cooling "
+                if not statuses["tempmode"]:
+                    statuses["tempmode"] = True
+                    msg_pad.addstr(logtime() + "Temperature control mode: cooling.\n")
+            else:
+                colour = curses.color_pair(2)
+                status = " heating "
+                if statuses["tempmode"]:
+                    statuses["tempmode"] = False
+                    msg_pad.addstr(logtime() + "Temperature control mode: heating.\n")
+            outwin.addstr(getLine(ticker, 5), getCol(ticker, 5), status, colour)
+
+            if (bits & 0x10):   # bit 4
+                status = "1 /   set"
+            else:
+                status = "0 / unset"
+            outwin.addstr(getLine(ticker, 4), getCol(ticker, 4), status)
+
+            if (bits & 0x80):   # bit 7 - fast cooling recirculation
+                status = " enabled"
+            else:
+                status = " off    "
+            outwin.addstr(getLine(ticker, 7), getCol(ticker, 7), status)
 
         case 0x1e:  # left dampened
             actualf = (int.from_bytes(byte, signed=True) + 126) / 5
@@ -385,24 +627,6 @@ def printByte(outwin, msg_pad, byte, ticker):
                 timerstring = " (off) "
             outwin.addstr(getLine(ticker), getCol(ticker), timerstring, colour)
                 
-
-        case 0x02:  # right dial
-            rawi = int.from_bytes(byte, signed=True)
-            if rawi < -33:
-                colour = curses.color_pair(1)
-            elif rawi > -1:
-                colour = curses.color_pair(2)
-            else:
-                colour = curses.A_REVERSE
-            actualf = (rawi + 126) / 5
-            outwin.addstr(getLine(ticker), getCol(ticker), f"{rawi:3d} ")
-            outwin.addstr(f"{actualf:5.1f}° ", colour)
-
-        case 0x03:  # right bias - temperature adjustment target
-            actualf = (int.from_bytes(byte, signed=True) + 126) / 5
-            outwin.addstr(getLine(ticker), getCol(ticker), f"{int.from_bytes(byte, signed=True):3d} ")
-            outwin.addstr(f"{actualf:5.1f}°")
-
         case 0x20:  # right dampened
             actualf = (int.from_bytes(byte, signed=True) + 126) / 5
             outwin.addstr(getLine(ticker), getCol(ticker), f"{int.from_bytes(byte, signed=True):3d} ")
@@ -416,212 +640,6 @@ def printByte(outwin, msg_pad, byte, ticker):
                 colour = 0
                 timerstring = " (off) "
             outwin.addstr(getLine(ticker), getCol(ticker), timerstring, colour)
-
-        case 0x05:  # mixing chamber temp, left
-            rawi = int.from_bytes(byte)
-            tempf = (rawi + 40) / 4
-            colour = 0
-            if not rawi:
-                colour = curses.color_pair(1)
-            elif rawi > 242:
-                colour = curses.color_pair(2)
-            outwin.addstr(getLine(ticker), getCol(ticker), f"{rawi:3d} ")
-            outwin.addstr(f"{tempf:6.2f}° ", colour)
-
-        case 0x06:  # mixing chamber temp, right
-            rawi = int.from_bytes(byte)
-            tempf = (rawi + 40) / 4
-            colour = 0
-            if not rawi:
-                colour = curses.color_pair(1)
-            elif rawi > 242:
-                colour = curses.color_pair(2)
-            outwin.addstr(getLine(ticker), getCol(ticker), f"{rawi:3d} ")
-            outwin.addstr(f"{tempf:6.2f}° ", colour)
-
-        case 0x09:  # left temp control bias
-            signed = int.from_bytes(byte, signed=True)
-            if (signed < -50):
-                colour = curses.color_pair(2)
-            elif (signed > 23):
-                colour = curses.color_pair(1)
-            else:
-                colour = curses.color_pair(4)
-            outwin.addstr(getLine(ticker),  getCol(ticker), f"{signed:4d} ", colour)
-            outwin.addstr(f"{(signed / 5):5.1f}°")
-
-        case 0x0c:  # left heater drive
-            if (byte[0] < 80):
-                colour = curses.color_pair(1)
-            elif (byte[0] > 80):
-                colour = curses.color_pair(2)
-            else:
-                colour = curses.color_pair(4)
-            outwin.addstr(getLine(ticker),  getCol(ticker), f" {byte[0]:3d} ", colour)
-            outwin.addstr(f"{(byte[0] - 80):4d}")
-
-        case 0x10:  # left, mid
-            outwin.addstr(getLine(ticker),  getCol(ticker), f" {byte[0]:3d} {(byte[0] - 80):4d}")
-
-        case 0x0e:  # left, slow
-            outwin.addstr(getLine(ticker),  getCol(ticker), f" {byte[0]:3d} {(byte[0] / 4):6.2f}°")
-
-        case 0x0a:  # right temp control bias
-            signed = int.from_bytes(byte, signed=True)
-            if (signed < -50):
-                colour = curses.color_pair(2)
-            elif (signed > 23):
-                colour = curses.color_pair(1)
-            else:
-                colour = curses.color_pair(4)
-            outwin.addstr(getLine(ticker),  getCol(ticker), f"{signed:4d} ", colour)
-            outwin.addstr(f"{(signed / 5):5.1f}°")
-
-        case 0x0d:  # right heater drive
-            if (byte[0] < 80):
-                colour = curses.color_pair(1)
-            elif (byte[0] > 80):
-                colour = curses.color_pair(2)
-            else:
-                colour = curses.color_pair(4)
-            outwin.addstr(getLine(ticker),  getCol(ticker), f" {byte[0]:3d} ", colour)
-            outwin.addstr(f"{(byte[0] - 80):4d}")
-
-        case 0x11:  # right, mid
-            outwin.addstr(getLine(ticker), getCol(ticker), f" {byte[0]:3d} {(byte[0] - 80):4d}")
-
-        case 0x0f:  # right, slow
-            outwin.addstr(getLine(ticker), getCol(ticker), f" {byte[0]:3d} {(byte[0] / 4):6.2f}°")
-
-        case 0x12:  # left valve control bias
-            signed = int.from_bytes(byte, signed=True)
-            if (signed < 0):
-                colour = curses.color_pair(2)
-            elif (signed > 0):
-                colour = curses.color_pair(1)
-            else:
-                colour = curses.color_pair(4)
-            outwin.addstr(getLine(ticker),  getCol(ticker) + 3, f"{signed:4d} ", colour)
-
-        case 0x13:  # right valve control bias
-            signed = int.from_bytes(byte, signed=True)
-            if (signed < 0):
-                colour = curses.color_pair(2)
-            elif (signed > 0):
-                colour = curses.color_pair(1)
-            else:
-                colour = curses.color_pair(4)
-            outwin.addstr(getLine(ticker), getCol(ticker) + 3, f"{signed:4d} ", colour)
-
-        case 0x14:  # left duty cycle
-            colour = 0
-            if byte == b"\x00":
-                colour = curses.color_pair(1)
-            elif byte == b"\xff":
-                colour = curses.color_pair(2)
-            outwin.addstr(getLine(ticker),  getCol(ticker) + 1, f"{int.from_bytes(byte):3d} {makePercent(byte):4d}% ", colour)
-
-        case 0x15:  # right duty cycle
-            colour = 0
-            if byte == b"\x00":
-                colour = curses.color_pair(1)
-            elif byte == b"\xff":
-                colour = curses.color_pair(2)
-            outwin.addstr(getLine(ticker), getCol(ticker) + 1, f"{int.from_bytes(byte):3d} {makePercent(byte):4d}% ", colour)
-
-        case 0x1b: # recirculation timer
-            rawi = int.from_bytes(byte)
-            colour = 0
-            if rawi:
-                colour = curses.color_pair(4)
-            outwin.addstr(getLine(ticker), getCol(ticker), f"{rawi:4d} ", colour)
-
-        case 0x04: # self-calibration timer a.k.a. switch-on countdown
-            rawi = int.from_bytes(byte)
-            seconds = (rawi % 12) * 5
-            minutes = rawi // 12
-            colour = 0
-            if rawi:
-                colour = curses.color_pair(3)
-            outwin.addstr(getLine(ticker), getCol(ticker), f"{rawi:4d} ", colour)
-            if rawi:
-                outwin.addstr(f"  {minutes:2d} min. {seconds:2d} s")
-            else:
-                outwin.addstr("               ")
-
-        case 0x07: # interior temp, raw
-            rawi = int.from_bytes(byte, signed=True)
-            tempf = (rawi + 126) / 5
-            colour = 0
-            if (rawi < -127) or (rawi > 125):
-                colour = curses.color_pair(3)
-            elif (rawi < -56):
-                colour = curses.color_pair(1)
-            elif (rawi > 24):
-                colour = curses.color_pair(2)
-            outwin.addstr(getLine(ticker), getCol(ticker), f"{rawi:4d} = ")
-            outwin.addstr(f"{tempf:5.1f} °C ", colour)
-
-        case 0x19: # interior temp, dampened
-            rawi = int.from_bytes(byte, signed=True)
-            tempf = (rawi + 126) / 5
-            colour = 0
-            if (rawi < -127) or (rawi > 125):
-                colour = curses.color_pair(3)
-            elif (rawi < -56):
-                colour = curses.color_pair(1)
-            elif (rawi > 24):
-                colour = curses.color_pair(2)
-            outwin.addstr(getLine(ticker), getCol(ticker), f"{rawi:4d} = ")
-            outwin.addstr(f"{tempf:5.1f} °C ", colour)
-
-        case 0x08: # exterior temp
-            rawi = int.from_bytes(byte, signed=True)
-            outwin.addstr(getLine(ticker), getCol(ticker), f"{(rawi / 2):6.1f} °C  ({rawi:4d})")
-
-        case 0x0b: # exterior temp bias
-            rawi = int.from_bytes(byte, signed=True)
-            if (rawi < -15):
-                colour = curses.color_pair(2)
-            elif (rawi > -14):
-                colour = curses.color_pair(1)
-            else:
-                colour = curses.color_pair(4)
-            outwin.addstr(getLine(ticker), getCol(ticker), f"{rawi:4d} = ")
-#            outwin.addstr(f"{(-1 * ((rawi * 5) + 70) / 50):5.1f} °C ", colour)
-            outwin.addstr(f"{(-1 * (((rawi + 1) // 2) + 7) / 5):5.1f} °C ", colour)
-            outwin.addstr(f"{(rawi / 5):5.1f} °C")
-
-        case 0x16: # coolant temp
-            rawi = int.from_bytes(byte, signed=True)
-            colour = 0
-            if rawi < 6:
-                colour = curses.color_pair(1)
-            elif rawi < 0:
-                colour = curses.color_pair(3)
-            elif rawi > 107:
-                colour = curses.color_pair(2)
-            outwin.addstr(getLine(ticker), getCol(ticker), f"{rawi:4d} ", colour)
-            outwin.addstr(f"  °C")
-
-        case 0x17: # evaporator temp
-            rawi = int.from_bytes(byte, signed=True)
-            tempf = rawi / 2
-            colour = 0
-            if not tempf:
-                colour = curses.color_pair(1)
-            elif rawi > 125:
-                colour = curses.color_pair(2)
-            outwin.addstr(getLine(ticker), getCol(ticker), f"{tempf:6.1f} ", colour)
-            outwin.addstr(f"°C  ({rawi:4d})")
-
-        case 0x18: # overheat protection status
-            st = int.from_bytes(byte)
-            colour = 0
-            if st:
-                colour = curses.color_pair(2)
-            outwin.addstr(getLine(ticker), getCol(ticker), f"{st:4d} ", colour)
-            outwin.addstr(f" (0x{st:02x})")
 
 
 def readFByte (bytesrc, stdscr):
@@ -724,6 +742,7 @@ def mainLoop (stdscr):
                 ticker = 0
 
             byte = readFByte(bytesource, stdscr)
+            byte_cache[ticker] = byte
 
             printByte(outwin, msgwin, byte, ticker)
             updTicker(ticker, stdscr)
