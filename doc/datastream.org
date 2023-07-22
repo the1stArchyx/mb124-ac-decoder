@@ -17,18 +17,22 @@ control modules.
 
 So far it is to be figured out if only certain modules from certain
 manufacturers supply this stream, but it is known that not all of them
-do. It may have been an early diagnostic data experiment or just for
-manufacturing stage function check.
+do. It may have been a diagnostic data experiment with the early
+digital control units or just for manufacturing stage function check.
 
 The terminology used here may differ from the manufacturer's
 terminology.
 
 See https://github.com/the1stArchyx/mb124-ac-decoder for the latest
-version.
+version of this document.
 
 * Packet format
 
-A whole packet is made of individual 41 bytes as follows:
+A whole packet is made of individual 41 bytes. When capturing data all
+the way from switch-on, the control module will output 32 bytes of
+garbage before a consistent data packet is transmitted. The FTDI
+serial cable used during research may catch one or two bytes of 00
+before actual data.
 
 ** 0x00 – temperature setting dial, left                              :input:
 
@@ -117,7 +121,7 @@ formula:
 
 Negative values bias towards heating and positive values towards
 cooling. The effective range for heating control (see 0x0c) is from
--50 (-10.0 °C) to +23 (+4.6 °C).
+-50 (0xce, -10.0 °C) to +23 (0x17, +4.6 °C).
 
 ** 0x0a – temperature control, right                               :internal:
 
@@ -148,8 +152,6 @@ See 0x0c.
 
 ** 0x0e – heater feedback reference, left                          :internal:
 
-See 0x0c.
-
 This value slowly follows the value of 0x0c. This value provides the
 temperature reference for the valve control feedback loop. The actual
 value in °C can be calculated with the following formula:
@@ -162,14 +164,12 @@ See 0x0e. This one follows the value of 0x0d instead.
 
 ** 0x10 – heating control bias, left, mid                          :internal:
 
-See 0x0c.
-
 This value follows the value of 0x0c with a dampening. It's not yet
 clear how this value affect the heating control.
 
 ** 0x11 – heating control bias, right, mid                         :internal:
 
-See 0x0c.
+See 0x10.
 
 This value follows the value of 0x0d with a dampening.
 
@@ -231,7 +231,7 @@ temperature reaches 122 or above. Once activated, the protection
 switches off when engine coolant temperature goes down to 117 or
 below.
 
-During overheat protection the AC compressor operation is inhibited.
+During overheat protection the AC compressor request is inhibited.
 
 ** 0x19 – interior temperature, dampened                           :internal:
 
@@ -239,7 +239,7 @@ See 0x07. This value follows the interior temperature sensor in a
 dampened manner. It is used for temperature control to avoid
 unnecessary sudden temperature changes.
 
-** 0x1a – user input and fast cooling control                       :bitmask:
+** 0x1a – user input and intense cooling control                    :bitmask:
 
 *** 0x1a bit 7 – unused
 
@@ -257,9 +257,9 @@ calculates a timer value for the requested temperature.
 
 *** 0x1a bit 4 - user intervention, mode change                    :internal:
 
-This bit is set when the user has made a mode change. Since the bit is
-typically set for a very short time, it is most often never seen to
-change state.
+This bit is briefly set when the user has made a mode change. Since
+the bit is typically set for a very short time, it is most often never
+seen to change state.
 
 *** 0x1a bit 3 – user intervention, temperature adjustment, left   :internal:
 
@@ -271,9 +271,9 @@ This bit indicates the status of reheat mode. When this bit is set,
 the red LED on the button is lit.
 
 When this mode is enabled, the air conditioning compressor is
-requested whether cooling is needed or not. The function exists to dry
-the interior air in case the moisture in the air tends to concentrate
-on the windscreen or other windows.
+requested whether cooling is needed or not. The primary use for this
+is to dry the interior air in case the moisture in the air tends to
+concentrate on the windscreen or other windows.
 
 *** 0x1a bit 1 – button status: economy mode (EC)                     :input:
 
@@ -317,7 +317,8 @@ Appears to be static 0.
 *** 0x1c bit 4 – A/C compressor request                              :output:
 
 This bit is set when the A/C compressor request line is driven. The
-heater blower must be on for activation and economy mode must be off.
+heater blower must be on for activation and economy mode (EC) must be
+off.
 
 *** 0x1c bit 3 – air recirculation, 80%                              :output:
 
@@ -332,8 +333,8 @@ driven. Bit 3 is always set together with this one.
 *** 0x1c bit 1 – radiator blower, stage II                           :output:
 
 This bit is set when the relay for radiator blower stage II is
-driven. Radiator blower is started at engine coolant temperature 107
-and switched off at 100.
+driven. Radiator blower is switched on at engine coolant temperature
+sensor value 107 and off at 100.
 
 Radiator blower stage I is controlled by a refrigerant pressure switch
 in the high pressure side of the circuit.
@@ -345,6 +346,10 @@ temperature control flaps is driven.
 
 : 0 = temperature control bypassed
 : 1 = middle vents temperature-controlled
+
+When the middle vents are temperature-controlled, they can also be
+closed to "leak air" state by another vacuum actuator. However, there
+doesn't seem to be a bit indicating its status.
 
 ** 0x1d – temperature control                                       :bitmask:
 
@@ -360,10 +365,14 @@ circulation pump is switched off during this time.
 
 *** 0x1d bit 5 – temperature control mode                          :internal:
 
+If left and right control values (0x09 and 0x0a) are roughly the same,
+the temperature control switches to cooling when the values go above
++3 and heating when the values go below -8 (0xf8).
+
 : 0 = heating
 : 1 = cooling
 
-In the heating mode automatic A/C compressor request is suppressed.
+In the heating mode automatic A/C compressor request is inhibited.
 
 *** 0x1d bit 4 – unused
 
@@ -399,7 +408,8 @@ For range, see 0x00.
 
 ** 0x1f – time, temperature dial damping, left                     :internal:
 
-When active, this ranges between 4 and 75 (0x4b). It's otherwise 0.
+When active, this unsigned value ranges between 4 and 75 (0x4b). It's
+otherwise 0.
 
 By observation this value is a time in seconds to advance the dampened
 temperature dial value towards the current user requested value.
@@ -457,12 +467,13 @@ levels used. See the table below:
 For research purposes the output from the vehicle was converted to TTL
 by means of a simple circuit of diodes and resistors to use an FTDI
 TTL-232R-5V "USB to TTL Serial Cable". This is what the initial
-decoder program written in Python were designed around.
+datalogging and decoder programs written in Python were designed
+around.
 
 * Tested vehicles
 
-The following vehicles were equipped with basic air conditioning, SA
-code 580.
+The following vehicles were equipped with basic "Tempmatic" air
+conditioning, SA code 580.
 
 - 124.092 – 320 TE (the original research platform)
 - 124.191 – E 300 DIESEL (facelift; this was the exception that had
@@ -471,8 +482,39 @@ code 580.
 
 ** Known not to work
 
-The following vehicle was equipped with automatic air conditioning, SA
-code 581.
+The following vehicle was equipped with fully automatic air
+conditioning, SA code 581.
 
-- 124.131 – E 300 DIESEL (US version, SA code 494; facelift; no data
+- 124.131 – E 300 DIESEL (US version, SA code 494; facelift) – no data
   stream)
+
+
+* Unfinished analysis notes
+
+This section contains notes of observations that aren't necessarily
+definitive at this point. Some of it may be correct, but much will be
+incorrect guesses.
+
+
+** 0x0b – exterior temperature bias
+
+The value appears to bias temperature adjustment targets from actual
+dial values as well as water valve feedback control.
+
+For water valve control the bias temperature seems to be ~raw / 5~,
+but it needs to be verified.
+
+The following observation appears to be correct only if both
+temperature dials are set at the same value! Whether the temperature
+control is functioning in heating or cooling mode may also skew the
+values. Self-calibration can also break logic, as two different data
+captures seem to show offsetting.
+
+For adjustment targets the no bias spot is at -14/-15 (0xf2/0xf3). To
+calculate the amount to shift from user-requested temperature to
+adjustment target, use the following formula (// = integer division):
+
+: adjustment target bias = -1 * (((ext.temp bias + 1) // 2) + 7)
+
+If you want the actual temperature difference value in °C, divide the
+above raw value by 5.

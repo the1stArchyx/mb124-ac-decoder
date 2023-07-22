@@ -1,0 +1,65 @@
+* Mercedes-Benz 124 A/C data stream decoder
+
+This crude Python program decodes the data stream output from some air
+conditioner control units used in Mercedes-Benz model 124. Reverse
+engineering documentation about the format of the data stream and its
+contents is available in ~doc/~. Captures of data streams for offline
+testing are available in ~testdata/~.
+
+Schematic diagram of a known working hardware solution, a simple
+diode-zener-resistor circuit to convert the 7.2 Vp-p serial data
+signal to TTL, is available in ~doc/TTL_adapter_schematic.pdf~.
+Additionally an FTDI TTL-232R-5V USB serial cable is required.
+
+This is purely a research project and therefore proper support of
+similar commercial solutions cannot be guaranteed. Documentation will
+most likely be limited.
+
+Also, /this program is not a fault code scanner/. The few modules
+supported by this software do not have a known functionality at the
+control unit to read fault codes through the serial interface.
+However, the same diagnostic connector can be used to switch the
+module to a diagnostic mode to read pulse codes with a pulse counter
+or an LED.
+
+Suggestions for improvement may be done by submitting an issue.
+
+
+* decoder.py
+
+The decoder requires Python 3.10 (match-case is used) and currently
+depends on ~argparse~, ~curses~, ~serial~, and ~time~. The program is
+developed and known to run on Debian 12 bookworm and Arch Linux.
+
+Offline testing of the decoder can be done by supplying the program a
+capture of a data stream, for example:
+
+: ./decoder.py -f testdata/driving.bin
+
+Run ~./decoder.py -h~ for other options.
+
+
+** In case module ~serial~ is not found
+
+You may need to install this module manually unless it's already
+installed in your system.
+
+For Debian 12 bookworm (and trixie/testing at the time of writing
+this):
+
+: apt install python3-serial
+
+For Arch Linux:
+
+: pacman -S python-pyserial
+
+For other distributions you may need to search the appropriate package
+from the distribution's repositories.
+
+
+* Trademarks
+
+Any trademarks, registered or not, current or expired, are used only
+for identification purposes. The contents of this repository has
+otherwise no relation of any kind to the past or current owners of
+trademarks mentioned.
