@@ -258,7 +258,15 @@ Appears to be static 0.
 
 *** 0x1a bit 6 – intense cooling mode                              :internal:
 
-This bit is set when the control unit operates in intense cooling mode.
+This bit is set when the control unit operates in intense cooling
+mode. The switching thresholds from control values 0x09 and 0x0a have
+been observed to be as follows:
+
+- On when the control values are 17-18 (3.4-3.6 °C) or greater.
+- Off when the contro values are 10-12 (2.0-2.4 °C) or less.
+
+The currently available data captures cannot offer less fuzzy
+thresholds.
 
 *** 0x1a bit 5 – user intervention, temperature adjustment, right :internal:
 
