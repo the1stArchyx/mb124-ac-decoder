@@ -294,7 +294,7 @@ mode. The switching thresholds from control values 0x09 and 0x0a have
 been observed to be as follows:
 
 - On when the control values are 17-18 (3.4-3.6 °C) or greater.
-- Off when the contro values are 10-12 (2.0-2.4 °C) or less.
+- Off when the control values are 10-11 (2.0-2.2 °C) or less.
 - During self-calibration intense cooling has been observed to turn
   off at 2-3 (0.4-0.6 °C). This may be intentional to rapidly cool a
   car that has been parked in the sun.
