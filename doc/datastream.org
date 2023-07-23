@@ -9,6 +9,7 @@ The information in this document is provided as is with no warranty of
 any kind. The information provided is based on reverse engineering
 efforts which means that its accuracy cannot be guaranteed.
 
+
 * What?
 
 This document describes the format of the raw "actual value" data
@@ -26,6 +27,7 @@ terminology.
 See https://github.com/the1stArchyx/mb124-ac-decoder for the latest
 version of this document.
 
+
 * Packet format
 
 A whole packet is made of individual 41 bytes. When capturing data all
@@ -33,6 +35,7 @@ the way from switch-on, the control module will output 32 bytes of
 garbage before a consistent data packet is transmitted. The FTDI
 serial cable used during research may catch one or two bytes of 00
 before actual data.
+
 
 ** 0x00 – temperature setting dial, left                              :input:
 
@@ -47,6 +50,7 @@ position on the control unit's panel. Due to mechanical reasons the
 temperature on the dial most likely will not match the control unit's
 value exactly.
 
+
 ** 0x01 – temperature adjustment target, left                      :internal:
 
 This is a signed byte that indicates the temperature the control
@@ -54,13 +58,16 @@ module is attempting to adjust to. It is biased by multiple factors,
 like both user-requested temperatures and the outside air
 temperature. For actual value, see 0x00 above.
 
+
 ** 0x02 – temperature setting dial, right                             :input:
 
 See 0x00 above.
 
+
 ** 0x03 – temperature adjustment target, right                     :internal:
 
 See 0x01 above.
+
 
 ** 0x04 – timer, self-calibration                                  :internal:
 
@@ -76,6 +83,7 @@ the calibration time the temperature control may seem erratic.
 4) At 60 (5 min. after, 5 min. left) — Second self-calibration.
 5) At 0 (10 min. after, timer ends) — Third self-calibration.
 
+
 ** 0x05 – mixing chamber temperature, left                            :input:
 
 This unsigned byte ranges between 0 (10 °C) and 243 (0xf3,
@@ -90,9 +98,11 @@ valve control.
 In some terminology this may be inaccurately called heater core
 temperature.
 
+
 ** 0x06 – mixing chamber temperature, right                           :input:
 
 See 0x05.
+
 
 ** 0x07 – interior air temperature                                    :input:
 
@@ -104,10 +114,12 @@ formula:
 
 ** 0x08 – exterior air temperature                                    :input:
 
+
 This signed byte ranges between -64 (0xc0, -32 °C) and 126 (0x7e,
 63 °C). The formula for the actual value in °C is as follows:
 
 : actual = raw / 2
+
 
 ** 0x09 – temperature control, left                                :internal:
 
@@ -123,9 +135,11 @@ Negative values bias towards heating and positive values towards
 cooling. The effective range for heating control (see 0x0c) is from
 -50 (0xce, -10.0 °C) to +23 (0x17, +4.6 °C).
 
+
 ** 0x0a – temperature control, right                               :internal:
 
 See 0x09 above.
+
 
 ** 0x0b – control bias, exterior air temperature                   :internal:
 
@@ -147,6 +161,7 @@ Based on logged data so far the range appears to be from -45 to +34.
 As with most other temperature control bias values, negative values
 bias towards heating and positive values towards cooling.
 
+
 ** 0x0c – heater drive, left                                       :internal:
 
 This unsigned byte ranges between 0 and 255 (0xff). It is used to
@@ -157,9 +172,11 @@ balance around 80 (0x50).
 Change of 1 unit (0.2 °C) of temperature differential control value affects
 this value directly about 3-4 units (0.75-1.00 °C).
 
+
 ** 0x0d – heater drive, right                                      :internal:
 
 See 0x0c.
+
 
 ** 0x0e – heater feedback reference, left                          :internal:
 
@@ -169,20 +186,24 @@ value in °C can be calculated with the following formula:
 
 : actual = raw / 4
 
+
 ** 0x0f – heater feedback reference, right                         :internal:
 
 See 0x0e. This one follows the value of 0x0d instead.
+
 
 ** 0x10 – heating control bias, left, mid                          :internal:
 
 This value follows the value of 0x0c with a dampening. It's not yet
 clear how this value affect the heating control.
 
+
 ** 0x11 – heating control bias, right, mid                         :internal:
 
 See 0x10.
 
 This value follows the value of 0x0d with a dampening.
+
 
 ** 0x12 – water valve feedback bias, left                          :internal:
 
@@ -193,19 +214,23 @@ bias towards closing the valve (cooling).
 It's biased by the heater feedback reference (0x0e) and the mixing
 chamber temprature (0x05).
 
+
 ** 0x13 – water valve feedback bias, right                         :internal:
 
 See 0x12. For this one the biasing values are from 0x0f and 0x06
 instead.
+
 
 ** 0x14 – water valve solenoid duty cycle, left                      :output:
 
 This unsigned byte ranges between 0 (0%, valve closed) and 255 (0xff,
 100%, valve open).
 
+
 ** 0x15 – water valve solenoid duty cycle, right                     :output:
 
 See 0x14.
+
 
 ** 0x16 – engine coolant temperature                                  :input:
 
@@ -216,6 +241,7 @@ in °C as is.
 
 Engine coolant temperature is used for prevention of overheating of
 the engine.
+
 
 ** 0x17 – evaporator temperature                                      :input:
 
@@ -229,6 +255,7 @@ The A/C compressor request turns on when this value is 14 (7 °C) or
 greater, and off when it falls to 10 (5 °C) or below. The compressor
 request line is routed through the refrigerant pressure switch to the
 compressor safety cut-out module.
+
 
 ** 0x18 – engine overheat protection status                        :internal:
 
@@ -244,17 +271,21 @@ below.
 
 During overheat protection the AC compressor request is inhibited.
 
+
 ** 0x19 – interior temperature, dampened                           :internal:
 
 See 0x07. This value follows the interior temperature sensor in a
 dampened manner. It is used for temperature control to avoid
 unnecessary sudden temperature changes.
 
+
 ** 0x1a – user input and intense cooling control                    :bitmask:
+
 
 *** 0x1a bit 7 – unused
 
 Appears to be static 0.
+
 
 *** 0x1a bit 6 – intense cooling mode                              :internal:
 
@@ -264,9 +295,16 @@ been observed to be as follows:
 
 - On when the control values are 17-18 (3.4-3.6 °C) or greater.
 - Off when the contro values are 10-12 (2.0-2.4 °C) or less.
+- During self-calibration intense cooling has been observed to turn
+  off at 2-3 (0.4-0.6 °C). This may be intentional to rapidly cool a
+  car that has been parked in the sun.
 
 The currently available data captures cannot offer less fuzzy
 thresholds.
+
+
+**** TODO Simulate interior temperature to obtain precise thresholds
+
 
 *** 0x1a bit 5 – user intervention, temperature adjustment, right :internal:
 
@@ -274,15 +312,18 @@ This bit is set when the user is making a temperature adjustment. If
 the adjustment is larger than three units (0.6 °C), the control unit
 calculates a timer value for the requested temperature.
 
+
 *** 0x1a bit 4 - user intervention, mode change                    :internal:
 
 This bit is briefly set when the user has made a mode change. Since
 the bit is typically set for a very short time, it is most often never
 seen to change state.
 
+
 *** 0x1a bit 3 – user intervention, temperature adjustment, left   :internal:
 
 See 0x1a bit 5.
+
 
 *** 0x1a bit 2 – button status: reheat                                :input:
 
@@ -294,6 +335,7 @@ requested whether cooling is needed or not. The primary use for this
 is to dry the interior air in case the moisture in the air tends to
 concentrate on the windscreen or other windows.
 
+
 *** 0x1a bit 1 – button status: economy mode (EC)                     :input:
 
 This bit indicates the status of economy mode. When this bit is set,
@@ -303,6 +345,7 @@ When this mode is enabled, the air conditioning compressor request is
 inhibited and middle vents are set to bypass heating. Air
 recirculation is limited to five minutes at a time.
 
+
 *** 0x1a bit 0 – button status: recirculation                         :input:
 
 This bit indicates the status of manually requested interior air
@@ -310,6 +353,7 @@ recirculation. When this bit is set, the red LED on the button is lit.
 
 The requested recirculation is always 100% and is limited to
 20 minutes with A/C enabled or 5 minutes in economy mode.
+
 
 ** 0x1b – circulation timer                                        :internal:
 
@@ -319,19 +363,43 @@ until air recirculation is automatically switched off to fresh air.
 The countdown starts from 20 (0x14) when air conditioning compressor
 is enabled and 5 when air conditioning is inhibited.
 
+
 ** 0x1c – actuator control                                          :bitmask:
+
 
 *** 0x1c bit 7 – water circulation pump                              :output:
 
 This bit is set when the water circulation pump is running.
 
+In cooling mode, engine coolant over 80 °C, it appears that the
+circulation pump switches at following thresholds.
+
+- Off when the mid-speed heater drive goes down to 20-22.
+- On when either mid-speed heater drive reaches up to 40. (Note: the
+  experimentally calculated reference temperature at slow heater drive
+  value 40 is 10 °C, which is the lowest possible temperature to be
+  measured by the mixing chamber temperature circuit.)
+
+
+**** TODO Simulate various values of engine coolant temperature
+
+The engine coolant temperature may affect when the circulation pump is
+switched on and off. Therefore the engine coolant should be simulated
+at certain fixed values to obtain accurate switching thresholds.
+
+The heater drive values are easiest to accurately control by
+simulating the interior temperature.
+
+
 *** 0x1c bit 6 – unused
 
 Appears to be static 0.
 
+
 *** 0x1c bit 5 – unused
 
 Appears to be static 0.
+
 
 *** 0x1c bit 4 – A/C compressor request                              :output:
 
@@ -339,15 +407,18 @@ This bit is set when the A/C compressor request line is driven. The
 heater blower must be on for activation and economy mode (EC) must be
 off.
 
+
 *** 0x1c bit 3 – air recirculation, 80%                              :output:
 
 This bit is set when the vacuum valve for 80% air recirculation is
 driven.
 
+
 *** 0x1c bit 2 – air recirculation, 100%                             :output:
 
 This bit is set when the vacuum valve for 100% air recirculation is
 driven. Bit 3 is always set together with this one.
+
 
 *** 0x1c bit 1 – radiator blower, stage II                           :output:
 
@@ -355,8 +426,9 @@ This bit is set when the relay for radiator blower stage II is
 driven. Radiator blower is switched on at engine coolant temperature
 sensor value 107 and off at 100.
 
-Radiator blower stage I is controlled by a refrigerant pressure switch
-in the high pressure side of the circuit.
+Radiator blower stage I is controlled by a pressure switch in the high
+pressure side of the refrigerant circuit.
+
 
 *** 0x1c bit 0 – temp-control for middle dash vents                  :output:
 
@@ -370,23 +442,27 @@ When the middle vents are temperature-controlled, they can also be
 closed to "leak air" state by another vacuum actuator. However, there
 doesn't seem to be a bit indicating its status.
 
+
 ** 0x1d – temperature control                                       :bitmask:
+
 
 *** 0x1d bit 7 – recirculation enabled for intense cooling         :internal:
 
 This has been observerd to be set two minutes after switching on
 ignition.
 
+
 *** 0x1d bit 6 – self-calibration                                  :internal:
 
 When set, the control unit is performing a self calibration. Water
 circulation pump is switched off during this time.
 
+
 *** 0x1d bit 5 – temperature control mode                          :internal:
 
 If left and right control values (0x09 and 0x0a) are roughly the same,
 the temperature control switches to cooling when the values go above
-+3 (+0.6 °C) and heating when the values go below -8 (0xf8, -1.6 °C).
++3 (+0.6 °C) and heating when the values go below -7 (0xf9, -1.4 °C).
 
 It has been observed that with a temperature setting difference of
 1.0 °C both control values must go down to -8 before mode is switched
@@ -397,27 +473,33 @@ to heating.
 
 In the heating mode automatic A/C compressor request is inhibited.
 
+
 *** 0x1d bit 4 – unused
 
 Appears to be static 1.
+
 
 *** 0x1d bit 3 - defrost, right                                       :input:
 
 This bit is set when the temperature control dial is turned all the
 way to its hot end stop.
 
+
 *** 0x1d bit 2 - max cooling, right                                   :input:
 
 This bit is set when the temperature control dial is turned all the
 way to its cold end stop.
 
+
 *** 0x1d bit 1 - defrost, left                                        :input:
 
 See 0x1d bit 3
 
+
 *** 0x1d bit 0 - max cooling, right                                   :input:
 
 See 0x1d bit 2
+
 
 ** 0x1e – temperature dial value, dampened, left                   :internal:
 
@@ -428,6 +510,7 @@ that the target value is reached in about 5 minutes.
 For minor changes up to 0.6 °C, or 3 raw units, the timer is not used.
 
 For range, see 0x00.
+
 
 ** 0x1f – time, temperature dial damping, left                     :internal:
 
@@ -447,9 +530,11 @@ to 75 seconds, which results in the target being reached in 4 * 75 =
 
 See 0x1e.
 
+
 ** 0x21 – time, temperature dial damping, right                    :internal:
 
 See 0x1f.
+
 
 ** 0x22 – static 0x00                                         :sync:internal:
 
@@ -457,30 +542,37 @@ This and the following six bytes have been used for data stream
 synchronisation. The actual meaning of these bytes is mostly unknown
 but they appear to be static data and therefore useful for easy sync.
 
+
 ** 0x23 – static 0x03                                         :sync:internal:
+
 
 ** 0x24 – static 0x04                                         :sync:internal:
 
+
 ** 0x25 – static 0x01                                         :sync:internal:
+
 
 ** 0x26 – static 0x23                                         :sync:internal:
 
 Most likely a version number, possibly hardware revision
 identifier. The number is 35 in base 10.
 
+
 ** 0x27 – static 0x02                                         :sync:internal:
+
 
 ** 0x28 – static 0x3b or 0x3c                                 :sync:internal:
 
 Most likely a version number, possibly software. 59 (0x3b) has been
-seen on two cases and 60 (0x3c) on a newer car.
+seen on two cases and 60 (0x3c) was seen on a newer car.
+
 
 * Serial data electricals
 
 The serial data supplied from socket 7 of the diagnostics connector
 block is basically 8-N-1 at 4,800 bps with about 30 ms gaps between
-frames. The only major difference to RS-232 or TTL are the signal
-levels used. See the table below:
+frames. The only major difference to RS-232 or TTL are the
+transmission line voltage levels used. See the table below:
 
 |       | RS-232    | TTL    | MB AC  |
 |-------+-----------+--------+--------|
@@ -493,6 +585,7 @@ TTL-232R-5V "USB to TTL Serial Cable". This is what the initial
 datalogging and decoder programs written in Python were designed
 around.
 
+
 * Tested vehicles
 
 The following vehicles were equipped with basic "Tempmatic" air
@@ -502,6 +595,7 @@ conditioning, SA code 580.
 - 124.191 – E 300 DIESEL (facelift; this was the exception that had
   0x3c as the last sync byte instead of 0x3b)
 - 124.193 – 300 TD TURBODIESEL
+
 
 ** Known not to work
 
@@ -522,10 +616,15 @@ incorrect guesses.
 ** 0x0b – exterior temperature bias
 
 The value appears to bias temperature adjustment targets from actual
-dial values as well as water valve feedback control.
+dial values +as well as water valve feedback control+.
 
-For water valve control the bias temperature seems to be ~raw / 5~,
-but it needs to be verified.
++For water valve control the bias temperature seems to be ~raw / 5~,
+but it needs to be verified.+ We shall forget the water valve here
+for now as it's much too vague.
+
+[2023-07-23 Sun] The following description is partly correct. The bias
+value is offset one way or the other by the temperature settings at
+the dials.
 
 The following observation appears to be correct only if both
 temperature dials are set at the same value! Whether the temperature
