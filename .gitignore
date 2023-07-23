@@ -1,0 +1,5 @@
+# In this repository LaTeX is an intermediate state in generation of
+# PDF documents.
+
+*.tex
+*.tex~
