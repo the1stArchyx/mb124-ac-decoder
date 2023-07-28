@@ -628,7 +628,7 @@ def printByte(outwin, msg_pad, byte, ticker):
                 timerstring = f"{int.from_bytes(byte):4d} s. "
             else:
                 colour = 0
-                timerstring = " (off) "
+                timerstring = " (off)  "
             outwin.addstr(getLine(ticker), getCol(ticker), timerstring, colour)
                 
         case 0x20:  # temperature dial value, dampened, right
@@ -642,7 +642,7 @@ def printByte(outwin, msg_pad, byte, ticker):
                 timerstring = f"{int.from_bytes(byte):4d} s. "
             else:
                 colour = 0
-                timerstring = " (off) "
+                timerstring = " (off)  "
             outwin.addstr(getLine(ticker), getCol(ticker), timerstring, colour)
 
 
