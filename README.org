@@ -38,6 +38,12 @@ capture of a data stream, for example:
 
 Run ~./decoder.py -h~ for other options.
 
+When using a data stream capture from a file as the data source, it
+can be seeked back and forwards with ~h/j/k/l~ keys. The seek length
+is -60/-10/+10/+60 packets respectively. Position in file is shown
+next to the packet ticker. Seeking is not available when decoding a
+live data stream.
+
 
 ** In case module ~serial~ is not found
 
