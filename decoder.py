@@ -648,6 +648,7 @@ def printByte(outwin, msg_pad, byte, ticker):
 
 def readByte (bytesrc, stdscr):
     if (args.file != ""):
+        stdscr.addstr(1, 68, f"pos: {bytesrc.tell():8d}")
         time.sleep(args.interval / 1000)
     byte = bytesrc.read(1)
     if (byte == b""):
@@ -755,6 +756,27 @@ def mainLoop (stdscr):
             ticker += 1
             outwin.refresh()
             msgwin.refresh()
+
+            if args.file != "":
+                inputKey = stdscr.getch()
+                if inputKey == ord('q'):
+                    curses.ungetch('q')
+                else:
+                    seekBy = 0
+                    if inputKey == ord('h'): # seek back by 60 peckets
+                        seekBy = -2460
+                    elif inputKey == ord('j'): # seek back by 10 packets
+                        seekBy = -410
+                    elif inputKey == ord('k'): # seek forward by 10 packets
+                        seekBy = 410
+                    elif inputKey == ord('l'): # seek forward by 60 packets
+                        seekBy = 2460
+
+                    if seekBy:
+                        curPos = bytesource.tell()
+                        if (curPos + seekBy) < 0:
+                            seekBy = -curPos
+                        bytesource.seek(seekBy, 1)
 
 
 def main (stdscr):
