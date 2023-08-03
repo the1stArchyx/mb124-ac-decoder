@@ -194,7 +194,7 @@ def updateExtTempBiasDelta(outwin):
 
 def printByte(outwin, msg_pad, byte, ticker):
     match ticker:
-        case 0x00:  # left dial
+        case 0x00 | 0x02:  # temperature setting dial, left and right
             rawi = int.from_bytes(byte, signed=True)
             if rawi < -33:
                 colour = curses.color_pair(1)
@@ -206,24 +206,7 @@ def printByte(outwin, msg_pad, byte, ticker):
             outwin.addstr(getLine(ticker), getCol(ticker), f"{rawi:4d} ")
             outwin.addstr(f"{actualf:5.1f}° ", colour)
 
-        case 0x01:  # left bias - temperature adjustment target
-            actualf = (int.from_bytes(byte, signed=True) + 126) / 5
-            outwin.addstr(getLine(ticker), getCol(ticker), f"{int.from_bytes(byte, signed=True):4d} ")
-            outwin.addstr(f"{actualf:5.1f}°")
-
-        case 0x02:  # right dial
-            rawi = int.from_bytes(byte, signed=True)
-            if rawi < -33:
-                colour = curses.color_pair(1)
-            elif rawi > -1:
-                colour = curses.color_pair(2)
-            else:
-                colour = curses.A_REVERSE
-            actualf = (rawi + 126) / 5
-            outwin.addstr(getLine(ticker), getCol(ticker), f"{rawi:4d} ")
-            outwin.addstr(f"{actualf:5.1f}° ", colour)
-
-        case 0x03:  # right bias - temperature adjustment target
+        case 0x01 | 0x03:  # temperature adjustment target, left and right
             actualf = (int.from_bytes(byte, signed=True) + 126) / 5
             outwin.addstr(getLine(ticker), getCol(ticker), f"{int.from_bytes(byte, signed=True):4d} ")
             outwin.addstr(f"{actualf:5.1f}°")
@@ -242,18 +225,7 @@ def printByte(outwin, msg_pad, byte, ticker):
             else:
                 outwin.addstr("               ")
 
-        case 0x05:  # mixing chamber temp, left
-            rawi = int.from_bytes(byte)
-            tempf = (rawi + 40) / 4
-            colour = 0
-            if not rawi:
-                colour = curses.color_pair(1)
-            elif rawi > 242:
-                colour = curses.color_pair(2)
-            outwin.addstr(getLine(ticker), getCol(ticker), f"{rawi:3d} ")
-            outwin.addstr(f"{tempf:6.2f}° ", colour)
-
-        case 0x06:  # mixing chamber temp, right
+        case 0x05 | 0x06:  # mixing chamber temp, left and right
             rawi = int.from_bytes(byte)
             tempf = (rawi + 40) / 4
             colour = 0
@@ -281,20 +253,7 @@ def printByte(outwin, msg_pad, byte, ticker):
             rawi = int.from_bytes(byte, signed=True)
             outwin.addstr(getLine(ticker), getCol(ticker), f"{(rawi / 2):6.1f} °C  ({rawi:4d})")
 
-        case 0x09:  # left temp control
-            signed = int.from_bytes(byte, signed=True)
-            if (signed < -50) or (signed > 23):
-                colour = curses.color_pair(3)
-            elif (signed < -7):
-                colour = curses.color_pair(2)
-            elif (signed > 3):
-                colour = curses.color_pair(1)
-            else:
-                colour = curses.A_BOLD
-            outwin.addstr(getLine(ticker),  getCol(ticker), f"{signed:+4d} ", colour)
-            outwin.addstr(f"{(signed / 5):+5.1f}°")
-
-        case 0x0a:  # right temp control
+        case 0x09 | 0x0a:  # temp control, left and right
             signed = int.from_bytes(byte, signed=True)
             if (signed < -50) or (signed > 23):
                 colour = curses.color_pair(3)
@@ -320,7 +279,7 @@ def printByte(outwin, msg_pad, byte, ticker):
             outwin.addstr(f"{(rawi / 5):+5.1f} °C")
             updateExtTempBiasDelta(outwin)
 
-        case 0x0c:  # left heater drive
+        case 0x0c | 0x0d:  # heater drive, left and right
             if (byte[0] < 80):
                 colour = curses.color_pair(1)
             elif (byte[0] > 80):
@@ -330,39 +289,13 @@ def printByte(outwin, msg_pad, byte, ticker):
             outwin.addstr(getLine(ticker),  getCol(ticker), f" {byte[0]:3d} ", colour)
             outwin.addstr(f"{(byte[0] - 80):4d}")
 
-        case 0x0d:  # right heater drive
-            if (byte[0] < 80):
-                colour = curses.color_pair(1)
-            elif (byte[0] > 80):
-                colour = curses.color_pair(2)
-            else:
-                colour = curses.color_pair(4)
-            outwin.addstr(getLine(ticker),  getCol(ticker), f" {byte[0]:3d} ", colour)
-            outwin.addstr(f"{(byte[0] - 80):4d}")
-
-        case 0x0e:  # left, slow
-            outwin.addstr(getLine(ticker),  getCol(ticker), f" {byte[0]:3d} {(byte[0] / 4):6.2f}°")
-
-        case 0x0f:  # right, slow
+        case 0x0e | 0x0f:  # left and right, slow
             outwin.addstr(getLine(ticker), getCol(ticker), f" {byte[0]:3d} {(byte[0] / 4):6.2f}°")
 
-        case 0x10:  # left, mid
-            outwin.addstr(getLine(ticker),  getCol(ticker), f" {byte[0]:3d} {(byte[0] - 80):4d}")
-
-        case 0x11:  # right, mid
+        case 0x10 | 0x11:  # left and right, mid
             outwin.addstr(getLine(ticker), getCol(ticker), f" {byte[0]:3d} {(byte[0] - 80):4d}")
 
-        case 0x12:  # left valve control bias (feedback)
-            signed = int.from_bytes(byte, signed=True)
-            if (signed < 0):
-                colour = curses.color_pair(2)
-            elif (signed > 0):
-                colour = curses.color_pair(1)
-            else:
-                colour = curses.color_pair(4)
-            outwin.addstr(getLine(ticker),  getCol(ticker) + 2, f"{signed:+5d} ", colour)
-
-        case 0x13:  # right valve control bias (feedback)
+        case 0x12 | 0x13:  # valve control bias (feedback), left and right
             signed = int.from_bytes(byte, signed=True)
             if (signed < 0):
                 colour = curses.color_pair(2)
@@ -372,21 +305,13 @@ def printByte(outwin, msg_pad, byte, ticker):
                 colour = curses.color_pair(4)
             outwin.addstr(getLine(ticker), getCol(ticker) + 2, f"{signed:+5d} ", colour)
 
-        case 0x14:  # left duty cycle
+        case 0x14 | 0x15:  # valve duty cycle, left and right
             colour = 0
             if byte == b"\x00":
                 colour = curses.color_pair(1)
             elif byte == b"\xff":
                 colour = curses.color_pair(2)
             outwin.addstr(getLine(ticker),  getCol(ticker), f"{int.from_bytes(byte):4d} {makePercent(byte):4d}% ", colour)
-
-        case 0x15:  # right duty cycle
-            colour = 0
-            if byte == b"\x00":
-                colour = curses.color_pair(1)
-            elif byte == b"\xff":
-                colour = curses.color_pair(2)
-            outwin.addstr(getLine(ticker), getCol(ticker), f"{int.from_bytes(byte):4d} {makePercent(byte):4d}% ", colour)
 
         case 0x16: # coolant temp
             rawi = int.from_bytes(byte, signed=True)
@@ -617,26 +542,12 @@ def printByte(outwin, msg_pad, byte, ticker):
                 status = " off    "
             outwin.addstr(getLine(ticker, 7), getCol(ticker, 7), status)
 
-        case 0x1e:  # temperature dial value, dampened, left
+        case 0x1e | 0x20:  # temperature dial value, dampened, left and right
             actualf = (int.from_bytes(byte, signed=True) + 126) / 5
             outwin.addstr(getLine(ticker), getCol(ticker), f"{int.from_bytes(byte, signed=True):4d} ")
             outwin.addstr(f"{actualf:5.1f}°")
 
-        case 0x1f:  # damping interval, left
-            if byte[0]:
-                colour = curses.color_pair(3)
-                timerstring = f"{int.from_bytes(byte):4d} s. "
-            else:
-                colour = 0
-                timerstring = " (off)  "
-            outwin.addstr(getLine(ticker), getCol(ticker), timerstring, colour)
-                
-        case 0x20:  # temperature dial value, dampened, right
-            actualf = (int.from_bytes(byte, signed=True) + 126) / 5
-            outwin.addstr(getLine(ticker), getCol(ticker), f"{int.from_bytes(byte, signed=True):4d} ")
-            outwin.addstr(f"{actualf:5.1f}°")
-
-        case 0x21:  # damping interval, right
+        case 0x1f | 0x21:  # damping interval, left and right
             if byte[0]:
                 colour = curses.color_pair(3)
                 timerstring = f"{int.from_bytes(byte):4d} s. "
