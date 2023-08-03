@@ -236,7 +236,7 @@ def printByte(outwin, msg_pad, byte, ticker):
             outwin.addstr(getLine(ticker), getCol(ticker), f"{rawi:3d} ")
             outwin.addstr(f"{tempf:6.2f}° ", colour)
 
-        case 0x07: # interior temp, raw
+        case 0x07 | 0x19: # interior temp, raw and dampened/delayed
             rawi = int.from_bytes(byte, signed=True)
             tempf = (rawi + 126) / 5
             colour = 0
@@ -344,19 +344,6 @@ def printByte(outwin, msg_pad, byte, ticker):
             outwin.addstr(getLine(ticker), getCol(ticker), f"{st:4d} ", colour)
             outwin.addstr(f" (0x{st:02x})")
 
-        case 0x19: # interior temp, dampened
-            rawi = int.from_bytes(byte, signed=True)
-            tempf = (rawi + 126) / 5
-            colour = 0
-            if (rawi < -127) or (rawi > 125):
-                colour = curses.color_pair(3)
-            elif (rawi < -56):
-                colour = curses.color_pair(1)
-            elif (rawi > 24):
-                colour = curses.color_pair(2)
-            outwin.addstr(getLine(ticker), getCol(ticker), f"{rawi:4d} = ")
-            outwin.addstr(f"{tempf:5.1f} °C ", colour)
-
         case 0x1a:  # dial adjustment status
             bits = int.from_bytes(byte)
             if (bits & 0x08):   # bit 3
@@ -391,12 +378,12 @@ def printByte(outwin, msg_pad, byte, ticker):
                 outwin.addstr(getLine(ticker, 6), getCol(ticker, 6), " off ")
                 if statuses["fastcool"]:
                     statuses["fastcool"] = False
-                    msg_pad.addstr(logtime() + "Fast cooling mode off.\n")
+                    msg_pad.addstr(logtime() + "Intense cooling mode off.\n")
             else:
                 outwin.addstr(getLine(ticker, 6), getCol(ticker, 6), "  on ", curses.color_pair(1))
                 if not statuses["fastcool"]:
                     statuses["fastcool"] = True
-                    msg_pad.addstr(logtime() + "Fast cooling mode on.\n")
+                    msg_pad.addstr(logtime() + "Intense cooling mode on.\n")
 
             if (bits & 0x10):   # bit 4 - mode change, user
                 colour = curses.color_pair(3)
