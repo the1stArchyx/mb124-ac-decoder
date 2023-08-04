@@ -37,36 +37,26 @@ serial cable used during research may catch one or two bytes of 00
 before actual data.
 
 
-** 0x00 – temperature setting dial, left                              :input:
+** 0x00, 0x02 – temperature setting dial, left and right              :input:
 
-This is a signed byte in range between -56 (0xc8, 14 °C) and +24
+These are signed bytes in range between -56 (0xc8, 14 °C) and +24
 (0x18, 30 °C). The actual temperature value in °C can be calculated
 with the following formula:
 
 : actual = (raw + 126) / 5
 
-This value indicates the user-requested temperature from the dial
-position on the control unit's panel. Due to mechanical reasons the
-temperature on the dial most likely will not match the control unit's
-value exactly.
+These values indicate the user-requested temperatures from the dial
+positions on the control unit's operating panel. Due to mechanical
+reasons the temperature on the dial most likely will not exactly match
+the internal control unit's value.
 
 
-** 0x01 – temperature adjustment target, left                      :internal:
+** 0x01, 0x03 – temperature adjustment target, left and right      :internal:
 
-This is a signed byte that indicates the temperature the control
+These are signed bytes that indicate the temperatures the control
 module is attempting to adjust to. It is biased by multiple factors,
 like both user-requested temperatures and the outside air
 temperature. For actual value, see 0x00 above.
-
-
-** 0x02 – temperature setting dial, right                             :input:
-
-See 0x00 above.
-
-
-** 0x03 – temperature adjustment target, right                     :internal:
-
-See 0x01 above.
 
 
 ** 0x04 – timer, self-calibration                                  :internal:
@@ -84,9 +74,9 @@ the calibration time the temperature control may seem erratic.
 5) At 0 (10 min. after, timer ends) — Third self-calibration.
 
 
-** 0x05 – mixing chamber temperature, left                            :input:
+** 0x05, 0x06 – mixing chamber temperature, left and right            :input:
 
-This unsigned byte ranges between 0 (10 °C) and 243 (0xf3,
+These unsigned bytes range between 0 (10 °C) and 243 (0xf3,
 70.75 °C). The actual value in °C can be calculated with the following
 formula:
 
@@ -97,11 +87,6 @@ valve control.
 
 In some terminology this may be inaccurately called heater core
 temperature.
-
-
-** 0x06 – mixing chamber temperature, right                           :input:
-
-See 0x05.
 
 
 ** 0x07 – interior air temperature                                    :input:
@@ -121,24 +106,19 @@ This signed byte ranges between -64 (0xc0, -32 °C) and 126 (0x7e,
 : actual = raw / 2
 
 
-** 0x09 – temperature control, left                                :internal:
+** 0x09, 0x0a – temperature control, left and right                :internal:
 
-This signed byte is the difference of dampened interior temperature
-(see 0x19) and the temperature adjustment target of the respective
-side. It ranges between -128 (0x80, -25.6 °C) and +127 (0x7f,
-+25.4 °C). The actual value in °C can be calculated with the following
-formula:
+These signed bytes are the differences of dampened interior
+temperature (see 0x19) and the temperature adjustment targets of the
+respective sides. Values ranges between -128 (0x80, -25.6 °C) and +127
+(0x7f, +25.4 °C). The actual value in °C can be calculated with the
+following formula:
 
 : actual = raw / 5
 
 Negative values bias towards heating and positive values towards
 cooling. The effective range for heating control (see 0x0c) is from
 -50 (0xce, -10.0 °C) to +23 (0x17, +4.6 °C).
-
-
-** 0x0a – temperature control, right                               :internal:
-
-See 0x09 above.
 
 
 ** 0x0b – control bias, exterior air temperature                   :internal:
@@ -162,9 +142,9 @@ As with most other temperature control bias values, negative values
 bias towards heating and positive values towards cooling.
 
 
-** 0x0c – heater drive, left                                       :internal:
+** 0x0c, 0x0d – heater drive, left and right                       :internal:
 
-This unsigned byte ranges between 0 and 255 (0xff). It is used to
+These unsigned bytes range between 0 and 255 (0xff). They are used to
 drive the heating control. 0 calls for no heating and 255 for maximum
 heating. When the target temperature is reached, this value will
 balance around 80 (0x50).
@@ -173,63 +153,36 @@ Change of 1 unit (0.2 °C) of temperature differential control value affects
 this value directly about 3-4 units (0.75-1.00 °C).
 
 
-** 0x0d – heater drive, right                                      :internal:
+** 0x0e, 0x0f – heater feedback reference, left and right          :internal:
 
-See 0x0c.
-
-
-** 0x0e – heater feedback reference, left                          :internal:
-
-This value slowly follows the value of 0x0c. This value provides the
-temperature reference for the valve control feedback loop. The actual
-value in °C can be calculated with the following formula:
+These values slowly follow the values of 0x0c and 0x0d respectively.
+These values provide the temperature references for the valve control
+feedback loop. The actual value in °C can be calculated with the
+following formula:
 
 : actual = raw / 4
 
 
-** 0x0f – heater feedback reference, right                         :internal:
+** 0x10, 0x11 – heating control, left and right                    :internal:
 
-See 0x0e. This one follows the value of 0x0d instead.
-
-
-** 0x10 – heating control bias, left, mid                          :internal:
-
-This value follows the value of 0x0c with a dampening. It's not yet
-clear how this value affect the heating control.
+These values follow the values of 0x0c and 0x0d with a dampening. It's
+not yet clear how these values affect the heating control.
 
 
-** 0x11 – heating control bias, right, mid                         :internal:
+** 0x12, 0x13 – water valve feedback bias, left and right          :internal:
 
-See 0x10.
-
-This value follows the value of 0x0d with a dampening.
-
-
-** 0x12 – water valve feedback bias, left                          :internal:
-
-This signed byte ranges between -128 (0x80) and +127 (0x7f). Negative
+These signed bytes range between -128 (0x80) and +127 (0x7f). Negative
 values bias towards opening the valve (heating) and positive values
 bias towards closing the valve (cooling).
 
-It's biased by the heater feedback reference (0x0e) and the mixing
-chamber temprature (0x05).
+It's biased by the heater feedback reference (0x0e, 0x0f) and the mixing
+chamber temprature (0x05, 0x06).
 
 
-** 0x13 – water valve feedback bias, right                         :internal:
+** 0x14, 0x15 – water valve solenoid duty cycle, left and right      :output:
 
-See 0x12. For this one the biasing values are from 0x0f and 0x06
-instead.
-
-
-** 0x14 – water valve solenoid duty cycle, left                      :output:
-
-This unsigned byte ranges between 0 (0%, valve closed) and 255 (0xff,
+These unsigned bytes range between 0 (0%, valve closed) and 255 (0xff,
 100%, valve open).
-
-
-** 0x15 – water valve solenoid duty cycle, right                     :output:
-
-See 0x14.
 
 
 ** 0x16 – engine coolant temperature                                  :input:
@@ -496,26 +449,27 @@ way to its cold end stop.
 See 0x1d bit 3
 
 
-*** 0x1d bit 0 - max cooling, right                                   :input:
+*** 0x1d bit 0 - max cooling, left                                    :input:
 
 See 0x1d bit 2
 
 
-** 0x1e – temperature dial value, dampened, left                   :internal:
+** 0x1e, 0x20 – temperature dial value, dampened, left and right   :internal:
 
-This value follows the value of temperature setting dial. The stepping
-speed to reach the value is defined by 0x1f in seconds in a manner
-that the target value is reached in about 5 minutes.
+These values follow the values of the temperature setting dials. The
+stepping speed to reach the value is defined by 0x1f and 0x21 in
+seconds in a manner that the target value is reached in about
+5 minutes.
 
 For minor changes up to 0.6 °C, or 3 raw units, the timer is not used.
 
 For range, see 0x00.
 
 
-** 0x1f – time, temperature dial damping, left                     :internal:
+** 0x1f, 0x21 – time, temperature dial damping, left and right     :internal:
 
-When active, this unsigned value ranges between 4 and 75 (0x4b). It's
-otherwise 0.
+When active, these unsigned values range between 4 and 75 (0x4b).
+They're otherwise 0.
 
 By observation this value is a time in seconds to advance the dampened
 temperature dial value towards the current user requested value.
@@ -524,16 +478,6 @@ The temperature change made must be over 0.6 °C, or 3 in raw value to
 trigger the timer. By minimum change of 0.8 °C the time value is set
 to 75 seconds, which results in the target being reached in 4 * 75 =
 300 seconds, or five minutes.
-
-
-** 0x20 – temperature dial value, dampened, right                  :internal:
-
-See 0x1e.
-
-
-** 0x21 – time, temperature dial damping, right                    :internal:
-
-See 0x1f.
 
 
 ** 0x22 – static 0x00                                         :sync:internal:
