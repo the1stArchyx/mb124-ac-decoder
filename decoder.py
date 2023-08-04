@@ -15,8 +15,6 @@
 #   - Group actuators controlled by, or controlling inputs near the
 #     values. Includes the "switch-on countdown" and "self-cal" status.
 
-#   - Create logic to detect the version variants from sync bytes.
-
 import argparse
 import curses
 import serial
@@ -30,12 +28,18 @@ parser.add_argument("-p", "--port", help="serial port to read data from, default
 parser.add_argument("-b", "--baudrate", help="serial data rate in bits per second, default: 4800", type=int, default=4800)
 args = parser.parse_args()
 
+# sync bytes, defined as nested tuples -> any combination of known bytes can match
+sync_bytes = ((b"\x00"),
+              (b"\x03"),
+              (b"\x04"),
+              (b"\x01"),
+              (b"\x23"),
+              (b"\x02"),
+              (b"\x3b", b"\x3c"))
 
-# sync byte string variant one, the original research platform
-sync_bytes = (b"\x00", b"\x03", b"\x04", b"\x01", b"\x23", b"\x02", b"\x3b")
-# another sync byte variant; captured from a facelift 124.191
-#sync_bytes = (b"\x00", b"\x03", b"\x04", b"\x01", b"\x23", b"\x02", b"\x3c")
-sync_hits  = [0,       0,       0,       0,       0,       0,       0]
+# known sync byte strings:
+# sync_bytes = (b"\x00", b"\x03", b"\x04", b"\x01", b"\x23", b"\x02", b"\x3b")
+# sync_bytes = (b"\x00", b"\x03", b"\x04", b"\x01", b"\x23", b"\x02", b"\x3c")
 
 statuses = dict(circmode=0, fastcool=False, middleventbypass=False, selfcal=False, tempmode=False, waterpump=False)
 
@@ -604,44 +608,39 @@ def mainLoop (stdscr):
 
     with openSource() as bytesource:
         while (stdscr.getch() != ord("q")):
-            if (sync < 3):
+            if sync < 3:
                 stdscr.addstr(1, 2, "Resyncing...    ")
                 stdscr.refresh()
-                while (sync < len(sync_bytes)):
+                while sync < len(sync_bytes):
                     byte = readByte(bytesource, stdscr)
                     if (stdscr.getch() == ord("q")):  #  This is here only to not get stuck in this loop!
                         return                        #  Maybe it should be rethought at some point..?
-                    if (byte == sync_bytes[sync]):
+                    if byte in sync_bytes[sync]:
                         sync += 1
                     else:
-                        if (byte == sync_bytes[0]):
+                        if byte in sync_bytes[0]:
                             sync = 1
                         else:
                             sync = 0
                 stdscr.addstr(1, 2, f"Synchronised: {sync} ")
                 sync_hits  = [0, 0, 0, 0, 0, 0, 0]
                 ticker = 0
-            elif (ticker > 0x21):  # data is read, check stream sync
+            elif ticker > 0x21:  # data is read, check stream sync
                 sync = 0
-                while (ticker < 0x29):
+                while ticker < 0x29:
                     byte = readByte(bytesource, stdscr)
                     tick = ticker - 0x22
-                    if (byte == sync_bytes[tick]):
+                    if byte in sync_bytes[tick]:
                         outwin.addstr(26, xRightLabel - 3 + (3 * (ticker - 0x21)), f"{byte.hex()}")
-                        outwin.addstr(29, xRightLabel - 4 + (3 * (ticker - 0x21)), f"{int.from_bytes(byte):3d}")
+                        outwin.addstr(27, xRightLabel - 4 + (3 * (ticker - 0x21)), f"{int.from_bytes(byte):3d}")
                         sync += 1
                     else:  # print non-matching sync bytes in reverse and a copy two lines below to catch them!
                         outwin.addstr(26, xRightLabel - 3 + (3 * (ticker - 0x21)), f"{byte.hex()}", curses.A_REVERSE)
                         outwin.addstr(28, xRightLabel - 3 + (3 * (ticker - 0x21)), f"{byte.hex()}")
-                        sync_hits[tick] = sync_hits[tick] + 1
                     updTicker(ticker, stdscr)
                     stdscr.refresh()
                     ticker += 1
                 stdscr.addstr(1, 2, f"Synchronised: {sync} ")
-                sync_hit_str = ""
-                for i in sync_hits:
-                    sync_hit_str += f"{i:3d}"
-                outwin.addstr(27, xRightLabel - 1, sync_hit_str)
                 outwin.refresh()
                 stdscr.refresh()
                 ticker = 0
