@@ -552,13 +552,28 @@ def readByte (bytesrc, stdscr):
         time.sleep(args.interval / 1000)
     byte = bytesrc.read(1)
     if (byte == b""):
-        stdscr.addstr(1, 2, "Waiting for data...")
-        stdscr.refresh()
-        while (byte == b"") and (stdscr.getch() != ord("q")):
-            byte = bytesrc.read(1)
-        if (byte == b""):
-            curses.ungetch("q")
-            byte = b"\x00"
+        if args.file != "":
+            stdscr.addstr(1, 2, "EOF. r to restart.")
+            stdscr.refresh()
+            while True:
+                inputKey = stdscr.getch()
+                if inputKey == ord('r'):
+                    bytesrc.seek(0)
+                    return bytesrc.read(1)
+                if inputKey == ord('q'):
+                    curses.ungetch('q')
+                    return b"\x00"
+                if inputKey == ord('h'): # seek back by 60 packets
+                    bytesrc.seek(-2460, io.SEEK_CUR)
+                    return bytesrc.read(1)
+        else:
+            stdscr.addstr(1, 2, "Waiting for data...")
+            stdscr.refresh()
+            while (byte == b"") and (stdscr.getch() != ord("q")):
+                byte = bytesrc.read(1)
+                if (byte == b""):
+                    curses.ungetch("q")
+                    byte = b"\x00"
     return byte
 
 
@@ -607,7 +622,7 @@ def mainLoop (stdscr):
     with openSource() as bytesource:
         while (stdscr.getch() != ord("q")):
             if sync < 3:
-                stdscr.addstr(1, 2, "Resyncing...    ")
+                stdscr.addstr(1, 2, "Resyncing...      ")
                 stdscr.refresh()
                 while sync < len(sync_bytes):
                     byte = readByte(bytesource, stdscr)
@@ -620,7 +635,7 @@ def mainLoop (stdscr):
                             sync = 1
                         else:
                             sync = 0
-                stdscr.addstr(1, 2, f"Synchronised: {sync} ")
+                stdscr.addstr(1, 2, f"Synchronised: {sync}   ")
                 sync_hits  = [0, 0, 0, 0, 0, 0, 0]
                 ticker = 0
             elif ticker > 0x21:  # data is read, check stream sync
@@ -638,7 +653,7 @@ def mainLoop (stdscr):
                     updTicker(ticker, stdscr)
                     stdscr.refresh()
                     ticker += 1
-                stdscr.addstr(1, 2, f"Synchronised: {sync} ")
+                stdscr.addstr(1, 2, f"Synchronised: {sync}   ")
                 outwin.refresh()
                 stdscr.refresh()
                 ticker = 0
@@ -658,7 +673,7 @@ def mainLoop (stdscr):
                     curses.ungetch('q')
                 else:
                     seekBy = 0
-                    if inputKey == ord('h'): # seek back by 60 peckets
+                    if inputKey == ord('h'): # seek back by 60 packets
                         seekBy = -2460
                     elif inputKey == ord('j'): # seek back by 10 packets
                         seekBy = -410
