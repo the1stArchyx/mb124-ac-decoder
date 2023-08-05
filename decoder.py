@@ -154,11 +154,11 @@ def logtime():
     return time.strftime("%H:%M:%S : ")
 
 
-def makePercent(byte) -> int:
-    """This function returns an integer value between 0 and 100 from a
-       byte value between 0x00 and 0xff.
+def makePercent(byte) -> float:
+    """This function returns a float between 0 and 100 from a byte
+       value between 0x00 and 0xff.
     """
-    return int(100 * int.from_bytes(byte) / 255)
+    return 100 * int.from_bytes(byte) / 255
 
 
 def getCol(ticker, bit=0):
@@ -315,7 +315,7 @@ def printByte(outwin, msg_pad, byte, ticker):
                 colour = curses.color_pair(1)
             elif byte == b"\xff":
                 colour = curses.color_pair(2)
-            outwin.addstr(getLine(ticker),  getCol(ticker), f"{int.from_bytes(byte):4d} {makePercent(byte):4d}% ", colour)
+            outwin.addstr(getLine(ticker),  getCol(ticker), f"{int.from_bytes(byte):4d} {makePercent(byte):6.1f}% ", colour)
 
         case 0x16: # coolant temp
             rawi = int.from_bytes(byte, signed=True)
