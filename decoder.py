@@ -158,7 +158,7 @@ def makePercent(byte) -> float:
     """This function returns a float between 0 and 100 from a byte
        value between 0x00 and 0xff.
     """
-    return 100 * int.from_bytes(byte) / 255
+    return 100 * int.from_bytes(byte, byteorder="big") / 255
 
 
 def getCol(ticker, bit=0):
@@ -182,21 +182,21 @@ def getLine(ticker, bit=0):
 
 
 def updateAdjTargetDeltas(outwin):
-    leftDelta = int.from_bytes(byte_cache[1], signed=True) - int.from_bytes(byte_cache[0], signed=True)
-    rightDelta = int.from_bytes(byte_cache[3], signed=True) - int.from_bytes(byte_cache[2], signed=True)
+    leftDelta = int.from_bytes(byte_cache[1], byteorder="big", signed=True) - int.from_bytes(byte_cache[0], byteorder="big", signed=True)
+    rightDelta = int.from_bytes(byte_cache[3], byteorder="big", signed=True) - int.from_bytes(byte_cache[2], byteorder="big", signed=True)
     outwin.addstr(getLine(1) + 1, getCol(1),
                   f"{leftDelta:+4d} {(leftDelta / 5):+5.1f}°  {rightDelta:+4d} {(rightDelta / 5):+5.1f}°", curses.color_pair(5))
 
 
 def updateExtTempBiasDelta(outwin):
-    extTempBiasDelta = int.from_bytes(byte_cache[0x08], signed=True) - int.from_bytes(byte_cache[0xb], signed=True)
+    extTempBiasDelta = int.from_bytes(byte_cache[0x08], byteorder="big", signed=True) - int.from_bytes(byte_cache[0xb], byteorder="big", signed=True)
     outwin.addstr(getLine(0xb) + 1, getCol(0xb), f"{extTempBiasDelta:4d} / {(50 - extTempBiasDelta):+4d}", curses.color_pair(5))
 
 
 def printByte(outwin, msg_pad, byte, ticker):
     match ticker:
         case 0x00 | 0x02:  # temperature setting dial, left and right
-            rawi = int.from_bytes(byte, signed=True)
+            rawi = int.from_bytes(byte, byteorder="big", signed=True)
             if rawi < -33:
                 colour = curses.color_pair(1)
             elif rawi > -1:
@@ -208,13 +208,13 @@ def printByte(outwin, msg_pad, byte, ticker):
             outwin.addstr(f"{actualf:5.1f}° ", colour)
 
         case 0x01 | 0x03:  # temperature adjustment target, left and right
-            actualf = (int.from_bytes(byte, signed=True) + 126) / 5
-            outwin.addstr(getLine(ticker), getCol(ticker), f"{int.from_bytes(byte, signed=True):4d} ")
+            actualf = (int.from_bytes(byte, byteorder="big", signed=True) + 126) / 5
+            outwin.addstr(getLine(ticker), getCol(ticker), f"{int.from_bytes(byte, byteorder='big', signed=True):4d} ")
             outwin.addstr(f"{actualf:5.1f}°")
             updateAdjTargetDeltas(outwin)
 
         case 0x04: # self-calibration timer a.k.a. switch-on countdown
-            rawi = int.from_bytes(byte)
+            rawi = int.from_bytes(byte, byteorder="big")
             seconds = (rawi % 12) * 5
             minutes = rawi // 12
             colour = 0
@@ -227,7 +227,7 @@ def printByte(outwin, msg_pad, byte, ticker):
                 outwin.addstr("               ")
 
         case 0x05 | 0x06:  # mixing chamber temperature, left and right
-            rawi = int.from_bytes(byte)
+            rawi = int.from_bytes(byte, byteorder="big")
             tempf = (rawi + 40) / 4
             colour = 0
             if not rawi:
@@ -238,7 +238,7 @@ def printByte(outwin, msg_pad, byte, ticker):
             outwin.addstr(f"{tempf:6.2f}° ", colour)
 
         case 0x07 | 0x19: # interior temperature, raw and dampened/delayed
-            rawi = int.from_bytes(byte, signed=True)
+            rawi = int.from_bytes(byte, byteorder="big", signed=True)
             tempf = (rawi + 126) / 5
             colour = 0
             if (rawi < -127) or (rawi > 125):
@@ -251,11 +251,11 @@ def printByte(outwin, msg_pad, byte, ticker):
             outwin.addstr(f"{tempf:5.1f} °C ", colour)
 
         case 0x08: # exterior temperature
-            rawi = int.from_bytes(byte, signed=True)
+            rawi = int.from_bytes(byte, byteorder="big", signed=True)
             outwin.addstr(getLine(ticker), getCol(ticker), f"{(rawi / 2):6.1f} °C  ({rawi:4d})")
 
         case 0x09 | 0x0a:  # temperature control, left and right
-            signed = int.from_bytes(byte, signed=True)
+            signed = int.from_bytes(byte, byteorder="big", signed=True)
             if (signed < -50):
                 colour = curses.color_pair(2)
             elif (signed > 23):
@@ -270,7 +270,7 @@ def printByte(outwin, msg_pad, byte, ticker):
             outwin.addstr(f"{(signed / 5):+5.1f}°")
 
         case 0x0b: # exterior temperature bias
-            rawi = int.from_bytes(byte, signed=True)
+            rawi = int.from_bytes(byte, byteorder="big", signed=True)
             if (rawi < -15):
                 colour = curses.color_pair(2)
             elif (rawi > -14):
@@ -299,7 +299,7 @@ def printByte(outwin, msg_pad, byte, ticker):
             outwin.addstr(getLine(ticker), getCol(ticker), f" {byte[0]:3d} {(byte[0] - 80):4d}")
 
         case 0x12 | 0x13:  # valve control bias (feedback), left and right
-            signed = int.from_bytes(byte, signed=True)
+            signed = int.from_bytes(byte, byteorder="big", signed=True)
             if (signed < 0):
                 colour = curses.color_pair(2)
             elif (signed > 0):
@@ -314,10 +314,10 @@ def printByte(outwin, msg_pad, byte, ticker):
                 colour = curses.color_pair(1)
             elif byte == b"\xff":
                 colour = curses.color_pair(2)
-            outwin.addstr(getLine(ticker),  getCol(ticker), f"{int.from_bytes(byte):4d} {makePercent(byte):5.1f}% ", colour)
+            outwin.addstr(getLine(ticker),  getCol(ticker), f"{int.from_bytes(byte, byteorder='big'):4d} {makePercent(byte):5.1f}% ", colour)
 
         case 0x16: # coolant temperature
-            rawi = int.from_bytes(byte, signed=True)
+            rawi = int.from_bytes(byte, byteorder="big", signed=True)
             colour = 0
             if rawi < 6:
                 colour = curses.color_pair(1)
@@ -329,7 +329,7 @@ def printByte(outwin, msg_pad, byte, ticker):
             outwin.addstr(f"  °C")
 
         case 0x17: # evaporator temperature
-            rawi = int.from_bytes(byte, signed=True)
+            rawi = int.from_bytes(byte, byteorder="big", signed=True)
             tempf = rawi / 2
             colour = 0
             if not tempf:
@@ -340,7 +340,7 @@ def printByte(outwin, msg_pad, byte, ticker):
             outwin.addstr(f"°C  ({rawi:4d})")
 
         case 0x18: # overheat protection status
-            st = int.from_bytes(byte)
+            st = int.from_bytes(byte, byteorder="big")
             colour = 0
             if st:
                 colour = curses.color_pair(2)
@@ -348,7 +348,7 @@ def printByte(outwin, msg_pad, byte, ticker):
             outwin.addstr(f" (0x{st:02x})")
 
         case 0x1a:  # user input
-            bits = int.from_bytes(byte)
+            bits = int.from_bytes(byte, byteorder="big")
             if (bits & 0x01):   # bit 0 - recirculation (user)
                 outwin.addstr(getLine(ticker, 0), getCol(ticker, 0), "  on ", curses.color_pair(3))
             else:
@@ -402,14 +402,14 @@ def printByte(outwin, msg_pad, byte, ticker):
             outwin.addstr(getLine(ticker, 7), getCol(ticker, 7), status)
 
         case 0x1b: # recirculation timer
-            rawi = int.from_bytes(byte)
+            rawi = int.from_bytes(byte, byteorder="big")
             colour = 0
             if rawi:
                 colour = curses.color_pair(4)
             outwin.addstr(getLine(ticker), getCol(ticker), f"{rawi:4d} ", colour)
 
         case 0x1c:  # actuator control
-            bits = int.from_bytes(byte)
+            bits = int.from_bytes(byte, byteorder="big")
             if (bits & 0x01):   # bit 0
                 colour = 0
                 status = "controlled"
@@ -474,7 +474,7 @@ def printByte(outwin, msg_pad, byte, ticker):
                     msg_pad.addstr(logtime() + "Water circulation pump off.\n")
 
         case 0x1d:  # temperature control
-            bits = int.from_bytes(byte)
+            bits = int.from_bytes(byte, byteorder="big")
             if (bits & 0x01):   # bit 0
                 outwin.addstr(getLine(ticker, 0), getCol(ticker, 0), " Max cold ", curses.color_pair(1))
             elif (bits & 0x02): # bit 1
@@ -532,14 +532,14 @@ def printByte(outwin, msg_pad, byte, ticker):
             outwin.addstr(getLine(ticker, 7), getCol(ticker, 7), status)
 
         case 0x1e | 0x20:  # temperature dial value, dampened, left and right
-            actualf = (int.from_bytes(byte, signed=True) + 126) / 5
-            outwin.addstr(getLine(ticker), getCol(ticker), f"{int.from_bytes(byte, signed=True):4d} ")
+            actualf = (int.from_bytes(byte, byteorder="big", signed=True) + 126) / 5
+            outwin.addstr(getLine(ticker), getCol(ticker), f"{int.from_bytes(byte, byteorder='big', signed=True):4d} ")
             outwin.addstr(f"{actualf:5.1f}°")
 
         case 0x1f | 0x21:  # adjustment interval, left and right
             if byte[0]:
                 colour = curses.color_pair(3)
-                timerstring = f"{int.from_bytes(byte):4d} s. "
+                timerstring = f"{int.from_bytes(byte, byteorder='big'):4d} s. "
             else:
                 colour = 0
                 timerstring = " (off)  "
@@ -645,7 +645,7 @@ def mainLoop (stdscr):
                     tick = ticker - 0x22
                     if byte in sync_bytes[tick]:
                         outwin.addstr(26, xRightLabel - 3 + (3 * (ticker - 0x21)), f"{byte.hex()}")
-                        outwin.addstr(27, xRightLabel - 4 + (3 * (ticker - 0x21)), f"{int.from_bytes(byte):3d}")
+                        outwin.addstr(27, xRightLabel - 4 + (3 * (ticker - 0x21)), f"{int.from_bytes(byte, byteorder='big'):3d}")
                         sync += 1
                     else:  # print non-matching sync bytes in reverse and a copy two lines below to catch them!
                         outwin.addstr(26, xRightLabel - 3 + (3 * (ticker - 0x21)), f"{byte.hex()}", curses.A_REVERSE)
