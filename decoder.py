@@ -569,9 +569,9 @@ def readByte (bytesrc, stdscr):
         else:
             stdscr.addstr(1, 2, "Waiting for data...")
             stdscr.refresh()
-            while (byte == b"") and (stdscr.getch() != ord("q")):
+            while (byte == b""):
                 byte = bytesrc.read(1)
-                if (byte == b""):
+                if ((byte == b"") and (stdscr.getch() == ord("q"))):
                     curses.ungetch("q")
                     byte = b"\x00"
     return byte
