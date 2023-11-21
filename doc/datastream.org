@@ -538,9 +538,9 @@ conditioning, SA code 580.
 - 124.092 – 320 TE (the original research platform)
 - 124.191 – E 300 DIESEL (facelift; this was the exception that had
   0x3c as the last sync byte instead of 0x3b)
-- 124.193 – 300 TD TURBODIESEL
+- 124.193 – 300 TD TURBODIESEL / E 300 TURBODIESEL
   - Car #1 was pre-facelift and the last sync byte was 0x3b.
-  - Car #2 was facelift and thge last sync byte was 0x3c.
+  - Car #2 was facelift and the last sync byte was 0x3c.
 
 
 ** Known not to work
@@ -555,8 +555,22 @@ conditioning, SA code 581.
 * Unfinished analysis notes
 
 This section contains notes of observations that aren't necessarily
-definitive at this point. Some of it may be correct, but much will be
+definitive at this point.  Some of it may be correct, but much will be
 incorrect guesses.
+
+
+** Supply voltage monitoring
+
+The control unit doesn't have any apparent supply voltage monitoring.
+This was tested with a lab power supply by feeding power into the
+output contact of fuse #7.  The control unit failed to operate when
+supply voltage was set down to 5.3 volts, and resumed at 6.0 volts.
+
+The voltage was required to stay high enough to start the coolant
+recirculation pump without affecting control unit operation.
+
+In low voltage operation it was possible for the control unit watchdog
+to fail to reset the microcontroller.
 
 
 ** 0x0b – exterior temperature bias
