@@ -508,7 +508,7 @@ identifier. The number is 35 in base 10.
 ** 0x28 – static 0x3b or 0x3c                                 :sync:internal:
 
 Most likely a version number, possibly software. 59 (0x3b) has been
-seen on two cases and 60 (0x3c) was seen on a newer car.
+seen on two cases and 60 (0x3c) was seen on two facelift versions.
 
 
 * Serial data electricals
@@ -539,6 +539,8 @@ conditioning, SA code 580.
 - 124.191 – E 300 DIESEL (facelift; this was the exception that had
   0x3c as the last sync byte instead of 0x3b)
 - 124.193 – 300 TD TURBODIESEL
+  - Car #1 was pre-facelift and the last sync byte was 0x3b.
+  - Car #2 was facelift and thge last sync byte was 0x3c.
 
 
 ** Known not to work
