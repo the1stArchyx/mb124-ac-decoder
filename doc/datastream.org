@@ -535,7 +535,8 @@ around.
 The following vehicles were equipped with basic "Tempmatic" air
 conditioning, SA code 580.
 
-- 124.092 – 320 TE (the original research platform)
+- 124.092 – 320 TE (the original research platform, control module
+  part number: 124 830 38 85, Bosch 9 140 010 183)
 - 124.191 – E 300 DIESEL (facelift; this was the exception that had
   0x3c as the last sync byte instead of 0x3b)
 - 124.193 – 300 TD TURBODIESEL / E 300 TURBODIESEL
