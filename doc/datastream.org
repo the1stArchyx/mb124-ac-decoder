@@ -392,8 +392,8 @@ temperature control flaps is driven.
 : 1 = middle vents temperature-controlled
 
 When the middle vents are temperature-controlled, they can also be
-closed to "leak air" state by another vacuum actuator. However, there
-doesn't seem to be a bit indicating its status.
+closed to "leak air" state. However, this function is not controlled
+by this control unit.
 
 
 ** 0x1d – temperature control                                       :bitmask:
@@ -525,9 +525,47 @@ transmission line voltage levels used. See the table below:
 
 For research purposes the output from the vehicle was converted to TTL
 by means of a simple circuit of diodes and resistors to use an FTDI
-TTL-232R-5V "USB to TTL Serial Cable". This is what the initial
+TTL-232R-5V "USB to TTL Serial Cable".  This is what the initial
 datalogging and decoder programs written in Python were designed
 around.
+
+
+* Control unit connector pinout
+
+The following pinout table was created by reverse engineering the
+research platform.  This allows further understanding of the
+limitations of what the control unit can do.
+
+
+| pin | wire colour         | IO | description                                       |
+|-----+---------------------+----+---------------------------------------------------|
+|   1 | brown  green        | /O | heating water recirculation pump                  |
+|   2 | white  green        | /O | heating water valve, left  (active low to shut)   |
+|   3 | white  blue         | /O | heating water valve, right (active low to shut)   |
+|   4 | blue   green  white | /O | A/C compressor request                            |
+|   5 | green  blue         | /O | solenoid valve, air recirculation                 |
+|   6 | green  violet       | /O | solenoid valve, air recirculation                 |
+|   7 | brown  grey         | /O | radiator blower stage II                          |
+|-----+---------------------+----+---------------------------------------------------|
+|   8 |                     |    | n/c (unused input, floats around 5 V)             |
+|   9 | grey   yellow       | /I | interior air temperature sensor                   |
+|  10 | grey   black        | /I | exterior air temperature sensor                   |
+|  11 | grey   green        | /I | mixing chamber air temperature sensor, left       |
+|  12 | grey   red          | /I | mixing chamber air temperature sensor, right      |
+|  13 | grey   white        | /I | post-evaporator air temperature sensor            |
+|  14 | blue   grey         | /I | engine coolant (heating water) temperature sensor |
+|-----+---------------------+----+---------------------------------------------------|
+|  15 | yellow white        | IO | diagnostic connector                              |
+|  16 | black  green  white | I  | heater blower (>11 V when blower is switched on)  |
+|  17 | black  pink         | I  | 15, power supply                                  |
+|  18 | grey   blue         | I  | 58d, instrument panel lights                      |
+|  19 | green  black        | /O | solenoid valve, center vents temperature control  |
+|  20 | brown               | c  | 31, ground                                        |
+|  21 | brown  yellow       | c  | temperature sensor ground                         |
+
+: c  = common, ie. a ground reference
+: /I = input, resistive sensor or switch to ground
+: /O = output, active low ie. switched to ground when active
 
 
 * Tested vehicles
