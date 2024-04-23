@@ -130,7 +130,7 @@ cooling.  The effective range for heating control (see 0x0c) is from
 -50 (0xce, -10.0 °C) to +23 (0x17, +4.6 °C).
 
 
-** 0x0b – control bias, exterior air temperature                   :internal:
+** TODO 0x0b – control bias, exterior air temperature              :internal:
 
 This signed byte reacts to change of exterior temperature and
 temperature dial values.  The exact math to it is not fully known,
@@ -445,9 +445,13 @@ to heating.
 In the heating mode automatic A/C compressor request is inhibited.
 
 
-*** 0x1d bit 4 – unused
+*** TODO 0x1d bit 4 – unused
 
-Appears to be static 1.
+Appears to be static 1 during "normal operation".
+
+This bit has been observed to be zero on a research unit that was
+operated without any temperature sensors or actuators connected.  The
+sensor circuit to which this bit reacted was the exterior temprature.
 
 
 *** 0x1d bit 3 - defrost, right                                       :input:
@@ -599,7 +603,6 @@ conditioning, SA code 580.
   - Car #1 was pre-facelift and the last sync byte was 0x3b.
   - Car #2 was facelift and the last sync byte was 0x3c.
 
-
 ** Known not to work
 
 The following vehicle was equipped with fully automatic air
@@ -615,6 +618,10 @@ This section contains notes of observations that aren't necessarily
 definitive at this point.  Some of it may be correct, but much will be
 incorrect guesses.
 
+[2024-04-23 Tue] A loose control unit (MB 124 830 38 85 / Bosch 9 140
+010 183, facelift version, sw 2/60) was acquired for off-car research
+purposes.
+
 
 ** Temperature reference
 
@@ -628,6 +635,9 @@ The control unit doesn't have any apparent supply voltage monitoring.
 This was tested with a lab power supply by feeding power into the
 output contact of fuse #7.  The control unit failed to operate when
 supply voltage was set down to 5.3 volts, and resumed at 6.0 volts.
+
+Observed on the recently acquired control unit: detection of maximum
+cooling position failed with supply voltage <7.0 volts.
 
 The voltage was required to stay high enough to start the coolant
 recirculation pump without affecting control unit operation.
