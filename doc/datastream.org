@@ -91,6 +91,25 @@ valve control.
 In some terminology this may be inaccurately called heater core
 temperature.
 
+| resistance | voltage | value |  temp |
+|------------+---------+-------+-------|
+|       open |    5.03 |     0 | 10.00 |
+|      21880 |    3.46 |     0 | 10.00 |
+|      19610 |    3.34 |     0 | 10.00 |
+|      19360 |    3.32 |     1 | 10.25 |
+|      14900 |    3.01 |    18 | 14.50 |
+|      10050 |    2.53 |    44 | 21.00 |
+|       4680 |    1.61 |    99 | 34.75 |
+|       3244 |    1.24 |   128 | 42.00 |
+|       2153 |    0.89 |   160 | 50.00 |
+|       1776 |    0.76 |   176 | 54.00 |
+|       1504 |    0.66 |   191 | 57.75 |
+|        998 |    0.46 |   226 | 66.50 |
+|        875 |    0.41 |   240 | 70.00 |
+|        817 |    0.38 |   243 | 70.75 |
+|    shorted |    0.00 |   243 | 70.75 |
+#+TBLFM: $4=($3+40)/4;%.2f
+
 
 ** 0x07 – interior air temperature                                    :input:
 
@@ -104,6 +123,21 @@ The math formula of interior temperature follows the same formula as
 the temperature setting dials.  This is currently expected to be
 accurate.
 
+| resistance | voltage | value | temp |
+|------------+---------+-------+------|
+|       open |    5.03 |  -128 | -0.4 |
+|      47000 |    4.15 |  -128 | -0.4 |
+|      32760 |    3.86 |  -107 |  3.8 |
+|      21880 |    3.46 |   -78 |  9.6 |
+|      14900 |    3.01 |   -46 | 16.0 |
+|      10050 |    2.53 |   -12 | 22.8 |
+|       4680 |    1.61 |    58 | 36.8 |
+|       3244 |    1.23 |    94 | 44.0 |
+|       2406 |    0.98 |   125 | 50.2 |
+|       2276 |    0.94 |   126 | 50.4 |
+|    shorted |    0.00 |   126 | 50.4 |
+#+TBLFM: $4=($3+126)/5;%.1f
+
 
 ** 0x08 – exterior air temperature                                    :input:
 
@@ -113,6 +147,27 @@ This signed byte ranges between -64 (0xc0, -32 °C) and 126 (0x7e,
 : actual = raw / 2
 
 This formula appears to be accurate.
+
+| resistance | voltage | value |  temp |
+|------------+---------+-------+-------|
+|       open |    5.04 |   -64 | -32.0 |
+|      47000 |    4.76 |   -55 | -27.5 |
+|      32760 |    4.65 |   -46 | -23.0 |
+|      21880 |    4.48 |   -33 | -16.5 |
+|      14900 |    4.26 |   -17 |  -8.5 |
+|      10050 |    3.96 |    -4 |  -2.0 |
+|       4680 |    3.18 |    27 |  13.5 |
+|       3244 |    2.73 |    43 |  21.5 |
+|       2153 |    2.22 |    62 |  31.0 |
+|       1776 |    1.98 |    70 |  35.0 |
+|       1504 |    1.79 |    78 |  39.0 |
+|        998 |    1.35 |    92 |  46.0 |
+|        817 |    1.16 |    97 |  48.5 |
+|        676 |    1.00 |   102 |  51.0 |
+|        117 |    0.21 |   125 |  62.5 |
+|         95 |    0.17 |   126 |  63.0 |
+|    shorted |    0.00 |   126 |  63.0 |
+#+TBLFM: $4=$3/2;%.1f
 
 
 ** 0x09, 0x0a – temperature control, left and right                :internal:
@@ -196,14 +251,33 @@ These unsigned bytes range between 0 (0%, valve closed) and 255 (0xff,
 
 ** 0x16 – engine coolant temperature                                  :input:
 
-This signed byte ranges between 5 and 127 (0x7f) within its functional
-range.  If sensor circuit is shorted, the value will be fixed to -126
-(0x82, 130 if unsigned).  Within the functional range the raw value is
-the actual value in °C as is.  Bit 7 of the value can be used as a
-fault status indicator for shorted circuit.
+This signed byte ranges between 5 and 130 (0x82) within its functional
+range.  Within the functional range the raw value is the actual value
+in °C as is.
 
 Engine coolant temperature is used for prevention of overheating of
 the engine.
+
+| resistance | voltage | value |
+|------------+---------+-------|
+|       open |    5.04 |     5 |
+|      14900 |    4.83 |     5 |
+|            |    4.81 |     5 |
+|            |    4.78 |     7 |
+|      10050 |    4.74 |     9 |
+|       4680 |    4.44 |    26 |
+|       3244 |    4.21 |    34 |
+|       2153 |    3.89 |    45 |
+|       1776 |    3.71 |    50 |
+|       1504 |    3.55 |    54 |
+|        998 |    3.08 |    66 |
+|        817 |    2.84 |    72 |
+|        676 |    2.60 |    78 |
+|        457 |    2.11 |    90 |
+|        182 |    1.12 |   124 |
+|        162 |    1.02 |   129 |
+|        158 |    1.00 |   130 |
+|    shorted |    0.00 |   130 |
 
 
 ** 0x17 – evaporator temperature                                      :input:
@@ -222,6 +296,20 @@ compressor safety cut-out module.
 
 The math formula matches exterior temperature formula and is currently
 considered accurate.
+
+| resistance | voltage | value | temp |
+|------------+---------+-------+------|
+|       open |    5.03 |     0 |  0.0 |
+|      32760 |    3.86 |     0 |  0.0 |
+|      21880 |    3.46 |    16 |  8.0 |
+|      14900 |    3.01 |    32 | 16.0 |
+|      10050 |    2.53 |    50 | 25.0 |
+|       4680 |    1.61 |    87 | 43.5 |
+|       3244 |    1.24 |   105 | 52.5 |
+|       2153 |    0.89 |   123 | 61.5 |
+|       1776 |    0.76 |   126 | 63.0 |
+|    shorted |    0.00 |   126 | 63.0 |
+#+TBLFM: $4=$3/2;%.1f
 
 
 ** 0x18 – engine overheat protection status                        :internal:
@@ -429,7 +517,7 @@ When set, the control unit is performing a self calibration.  Water
 circulation pump is switched off during this time.
 
 
-*** 0x1d bit 5 – temperature control mode                          :internal:
+*** TODO 0x1d bit 5 – temperature control mode                     :internal:
 
 If left and right control values (0x09 and 0x0a) are roughly the same,
 the temperature control switches to cooling when the values go above
@@ -445,13 +533,14 @@ to heating.
 In the heating mode automatic A/C compressor request is inhibited.
 
 
-*** TODO 0x1d bit 4 – unused
+*** TODO 0x1d bit 4 – exterior frosting                            :internal:
 
-Appears to be static 1 during "normal operation".
+This bit is set to 1 when the exterior temperature rises up to 1.0 °C
+(+2 in raw value).  The bit is cleared to 0 when the exterior
+temperature falls down to -0.5 °C (-1 in raw value).
 
-This bit has been observed to be zero on a research unit that was
-operated without any temperature sensors or actuators connected.  The
-sensor circuit to which this bit reacted was the exterior temprature.
+The names of bit 4 and bit 5 needs to be rethought as they are likely
+direct A/C compressor control bits.
 
 
 *** 0x1d bit 3 - defrost, right                                       :input:
