@@ -228,7 +228,7 @@ def printByte(outwin, msg_pad, byte, ticker):
 
         case 0x05 | 0x06:  # mixing chamber temperature, left and right
             rawi = int.from_bytes(byte, byteorder="big")
-            tempf = (rawi + 40) / 4
+            tempf = (rawi + 48) / 4
             colour = 0
             if not rawi:
                 colour = curses.color_pair(1)
