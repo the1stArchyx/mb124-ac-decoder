@@ -343,7 +343,7 @@ def printByte(outwin, msg_pad, byte, ticker):
             st = int.from_bytes(byte, byteorder="big")
             colour = 0
             st_count = 0x3f & st
-            if st_count:
+            if st:
                 colour = curses.color_pair(3)
                 if st_count > 19:
                     colour = curses.color_pair(2)
