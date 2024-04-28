@@ -342,10 +342,19 @@ def printByte(outwin, msg_pad, byte, ticker):
         case 0x18: # overheat protection status
             st = int.from_bytes(byte, byteorder="big")
             colour = 0
-            if st:
-                colour = curses.color_pair(2)
-            outwin.addstr(getLine(ticker), getCol(ticker), f"{st:4d} ", colour)
-            outwin.addstr(f" (0x{st:02x})")
+            st_count = 0x3f & st
+            if st_count:
+                colour = curses.color_pair(3)
+                if st_count > 19:
+                    colour = curses.color_pair(2)
+            if st & 0x80:
+                st_mode = "Stage 2"
+            elif st & 0x40:
+                st_mode = "Stage 1"
+            else:
+                st_mode = "off    "
+            outwin.addstr(getLine(ticker), getCol(ticker), f"{st_count:4d} ", colour)
+            outwin.addstr(f" ({st_mode})")
 
         case 0x1a:  # user input
             bits = int.from_bytes(byte, byteorder="big")
