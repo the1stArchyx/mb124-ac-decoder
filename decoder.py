@@ -137,7 +137,7 @@ labels = ((0b01, ( 1, xLeftLabel,  "Temp dial  . . . . :", 21)), # 0x00 - temper
                   ( 0, xLeftLabel,  ""                    , 21), # 0x1d/1 - defrost, left
                   ( 0, xLeftLabel,  ""                    , 34), # 0x1d/2 - max cooling, right
                   ( 0, xLeftLabel,  ""                    , 34), # 0x1d/3 - defrost, right
-                  (14, xRightLabel, "Ext. temp  . . . . :", 21), # 0x1d/4
+                  (14, xRightLabel, "Exterior air . . . :", 21), # 0x1d/4 - exterior air (non-)freeze
                   (11, xRightLabel, "Temp control mode  :", 21), # 0x1d/5 - control mode: 0 = heating; 1 = cooling
                   (22, xRightLabel, "Self-calibration . :", 21), # 0x1d/6 - self-calibration
                   ( 6, xRightLabel, "^^ recirculation . :", 21), # 0x1d/7 - intense cooling mode auto-recirculation
@@ -494,9 +494,9 @@ def printByte(outwin, msg_pad, byte, ticker):
                 outwin.addstr(getLine(ticker, 2), getCol(ticker, 2), "Controlled")
 
             if (bits & 0x10):   # bit 4
-                status = "melting "
+                status = "non-freezing"
             else:
-                status = "freezing"
+                status = "freezing    "
             outwin.addstr(getLine(ticker, 4), getCol(ticker, 4), status)
 
             if (bits & 0x20):   # bit 5 - temperature control mode
