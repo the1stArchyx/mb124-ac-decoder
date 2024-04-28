@@ -222,31 +222,26 @@ The math formula matches exterior temperature formula and is currently
 considered accurate.
 
 
-** 0x18 – engine overheat protection status                        :internal:
+** TODO 0x18 – engine overheat protection status                   :internal:
 
-This (most likely) unsigned byte is 0 in normal operation.  If the
-engine coolant temperature sensor circuit is shorted, the value will
-be 190 (0xbe, -66 if signed).  In overheat protection operation the
-value will count from 64 (0x40) to 103 (0x67).
+This byte is bitmapped.  Bits 6 and 7 are status indicators and bits 0
+to 5 are a counter.
 
-An alternative interpretation could be two status bits and a six bit
-number.  In that case bit 7 would signify a fault, bit 6 an overheat
-condition, and bits 0 to 5 would be a number.  This would mean that
-the number in fault condition would be 62 (0x3e) and the counter would
-count from 0 to 39 (0x27).
+| bit | description                                  |
+|-----+----------------------------------------------|
+|   7 | overheat protection stage 2 active (127-122) |
+|   6 | overheat protection stage 1 active (122-117) |
+| 0-5 | counter                                      |
 
-Engine overheat protection is activated when the engine coolant
-temperature reaches 122 or above.  Once activated, the protection
-switches off when engine coolant temperature goes down to 117 or
-below.
+During stage 1 the counter counts from 0 to 39 (0x27).  Engine
+overheat protection stage 1 is activated when engine coolant
+temperature reaches 122.  Overheat protection deactivates at engine
+coolant temperature 117.
 
-During overheat protection the AC compressor request is inhibited.
-
-# In Mercedes-Benz documentation for the automatic A/C matching 122 °C
-# and 117 °C temperatures were discovered.  In this protection mode a
-# 50% duty cycle for the A/C compressor was also documented with time
-# periods of 20 seconds off and 20 seconds on, which matches with the
-# counter.
+During stage 2 the counter value is fixed to 62 (0x3e).  Engine
+overheat protection stage 2 activates at engine coolant
+temperature 127.  The protection mode returns to stage 1 at engine
+coolant temperature 122.
 
 
 ** 0x19 – interior temperature, dampened                           :internal:
@@ -605,31 +600,33 @@ These tables serve as an aid to match potentiometer values when
 building a testing rig for these control units.
 
 
-*** TODO Interior air, mixing chamber, and evaporator temperatures – pins 9, 11, 12, 13
+*** Interior air, mixing chamber, and evaporator temperatures – pins 9, 11, 12, 13
 
 mix : Mixing chamber temperature (0x05 and 0x06) – resistance range
-between 820 Ω and 19.6 kΩ.
+between 820 Ω and 20 kΩ.
 
 int. : Interior air temperature (0x07) – resistance range between
-2.2 kΩ and 32-47 kΩ.
+2.2 kΩ and 46 kΩ.
 
 evap. : Evaporator temperature (0x17) – resistance range between
-1.8 kΩ and 22-32 kΩ.
+1.8 kΩ and 34 kΩ.
 
 | resistance | voltage | int. | temp | mix |  temp | evap. | temp |
 |------------+---------+------+------+-----+-------+-------+------|
 |       open |    5.03 |      |      |     |       |       |      |
-|      47000 |    4.15 | -128 | -0.4 |     |       |       |      |
-|      32760 |    3.86 | -107 |  3.8 |     |       |     0 |  0.0 |
+|      45500 |    4.11 | -128 | -0.4 |     |       |       |      |
+|      44600 |    4.11 | -127 | -0.2 |     |       |       |      |
+|      33560 |    3.87 | -109 |  3.4 |     |       |     0 |  0.0 |
+|      32110 |    3.84 | -106 |  4.0 |     |       |     1 |  0.5 |
 |      21880 |    3.46 |  -78 |  9.6 |     |       |    16 |  8.0 |
-|      19610 |    3.34 |      |      |   0 | 12.00 |       |      |
-|      19360 |    3.32 |      |      |   1 | 12.25 |       |      |
+|      19610 |    3.34 |  -69 | 11.4 |   0 | 12.00 |    21 | 10.5 |
+|      19360 |    3.32 |  -68 | 11.6 |   1 | 12.25 |    21 | 10.5 |
 |      14900 |    3.01 |  -46 | 16.0 |  18 | 16.50 |    32 | 16.0 |
 |      10050 |    2.53 |  -12 | 22.8 |  44 | 23.00 |    50 | 25.0 |
 |       4680 |    1.61 |   58 | 36.8 |  99 | 36.75 |    87 | 43.5 |
 |       3244 |    1.24 |   94 | 44.0 | 128 | 44.00 |   105 | 52.5 |
-|       2406 |    0.98 |  125 | 50.2 |     |       |       |      |
-|       2276 |    0.94 |  126 | 50.4 |     |       |       |      |
+|       2406 |    0.98 |  125 | 50.2 | 152 | 50.00 |   119 | 59.5 |
+|       2276 |    0.94 |  126 | 50.4 | 156 | 51.00 |   121 | 60.5 |
 |       2153 |    0.89 |      |      | 160 | 52.00 |   123 | 61.5 |
 |       1776 |    0.76 |      |      | 176 | 56.00 |   126 | 63.0 |
 |       1504 |    0.66 |      |      | 191 | 59.75 |       |      |
@@ -642,13 +639,19 @@ evap. : Evaporator temperature (0x17) – resistance range between
 Pull-up resistor value is 10 kΩ.
 
 
-*** TODO Exterior air temperature – pin 10
+*** Exterior air temperature – pin 10
 
-Data index 0x08.  Resistance range between 100 Ω and >47 kΩ.
+Data index 0x08.  Sensor resistance ranges between 100 Ω and >70 kΩ.
+Measurements of resistances over 70 kΩ are flaky at best, and
+therefore irrelevant.  Value of -61 is never seen.
 
 | resistance | voltage | value |  temp |
 |------------+---------+-------+-------|
-|       open |    5.04 |   -64 | -32.0 |
+|       open |    5.04 |       |       |
+|      87300 |    4.88 |   -64 | -32.0 |
+|      75200 |    4.86 |   -62 | -31.0 |
+|      69200 |    4.84 |   -62 | -31.0 |
+|      66900 |    4.84 |   -61 | -30.5 |
 |      47000 |    4.76 |   -55 | -27.5 |
 |      32760 |    4.65 |   -46 | -23.0 |
 |      21880 |    4.48 |   -33 | -16.5 |
@@ -656,6 +659,7 @@ Data index 0x08.  Resistance range between 100 Ω and >47 kΩ.
 |      10050 |    3.96 |    -4 |  -2.0 |
 |       4680 |    3.18 |    27 |  13.5 |
 |       3244 |    2.73 |    43 |  21.5 |
+|       2703 |    2.50 |    51 |  25.5 |
 |       2153 |    2.22 |    62 |  31.0 |
 |       1776 |    1.98 |    70 |  35.0 |
 |       1504 |    1.79 |    78 |  39.0 |
@@ -667,19 +671,20 @@ Data index 0x08.  Resistance range between 100 Ω and >47 kΩ.
 |    shorted |    0.00 |       |       |
 #+TBLFM: $4=$3/2;%.1f
 
-Pull-up resistor value is likely 2.7 kΩ.
+Pull-up resistor value is 2.7 kΩ.
 
 
-*** TODO Engine coolant temperature – pin 14
+*** Engine coolant temperature – pin 14
 
-Data index 0x16.  Resistance range between 158 Ω and 10-15 kΩ.
+Data index 0x16.  Resistance range between 158 Ω and 13 kΩ.  Value of
+6 is never seen.
 
 | resistance | voltage | value |
 |------------+---------+-------|
 |       open |    5.04 |       |
 |      14900 |    4.83 |       |
-|            |    4.81 |     5 |
-|            |    4.78 |     7 |
+|      12570 |    4.80 |     5 |
+|      11480 |    4.78 |     7 |
 |      10050 |    4.74 |     9 |
 |       4680 |    4.44 |    26 |
 |       3244 |    4.21 |    34 |
