@@ -222,7 +222,7 @@ The math formula matches exterior temperature formula and is currently
 considered accurate.
 
 
-** TODO 0x18 – engine overheat protection status                   :internal:
+** 0x18 – engine overheat protection status                        :internal:
 
 This byte is bitmapped.  Bits 6 and 7 are status indicators and bits 0
 to 5 are a counter.
@@ -231,17 +231,19 @@ to 5 are a counter.
 |-----+----------------------------------------------|
 |   7 | overheat protection stage 2 active (127-122) |
 |   6 | overheat protection stage 1 active (122-117) |
-| 0-5 | counter                                      |
+| 0-5 | counter (<20 = compressor enabled)           |
 
 During stage 1 the counter counts from 0 to 39 (0x27).  Engine
 overheat protection stage 1 is activated when engine coolant
 temperature reaches 122.  Overheat protection deactivates at engine
-coolant temperature 117.
+coolant temperature 117.  In stage 1 A/C compressor duty cycle is
+reduced to 50%, 20 seconds on and 20 seconds off.
 
 During stage 2 the counter value is fixed to 62 (0x3e).  Engine
 overheat protection stage 2 activates at engine coolant
 temperature 127.  The protection mode returns to stage 1 at engine
-coolant temperature 122.
+coolant temperature 122.  In stage 2 actuation of A/C compressor is
+inhibited.
 
 
 ** 0x19 – interior temperature, dampened                           :internal:
@@ -565,8 +567,8 @@ limitations of what the control unit can do.
 |   2 | white  green        | /O | heating water valve, left  (active low to shut)   |
 |   3 | white  blue         | /O | heating water valve, right (active low to shut)   |
 |   4 | blue   green  white | /O | A/C compressor request                            |
-|   5 | green  blue         | /O | solenoid valve, air recirculation                 |
-|   6 | green  violet       | /O | solenoid valve, air recirculation                 |
+|   5 | green  blue         | /O | solenoid valve, air recirculation, 100%           |
+|   6 | green  violet       | /O | solenoid valve, air recirculation,  80%           |
 |   7 | brown  grey         | /O | radiator blower stage II                          |
 |-----+---------------------+----+---------------------------------------------------|
 |   8 |                     |    | n/c (unused input, floats around 5 V)             |
