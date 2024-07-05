@@ -45,11 +45,28 @@ with the following formula:
 
 : actual = (raw + 126) / 5
 
+The actual value in °F can be calculated with
+
+: actual_F = (raw + 166) / 2
+
 These values indicate the user-requested temperatures from the dial
 positions on the control unit's operating panel.  Due to mechanical
 reasons the temperature on the dial most likely will not exactly match
 the internal control unit's value.  Otherwise the temperature
 calculation formula is currently expected to be accurate.
+
+The table below shows also Fahrenheit temperature equivalents on
+possible US version of the control unit.  Be aware that due to the
+analog approximate nature of this design the values indicated aren't
+exact when converting between temperature units.
+
+| value | °C | °F | printed on dial |
+|-------+----+----+-----------------|
+|   -56 | 14 | 55 | no              |
+|   -36 | 18 | 65 | yes             |
+|   -16 | 22 | 75 | yes             |
+|     4 | 26 | 85 | yes             |
+|   +24 | 30 | 95 | no              |
 
 
 ** 0x01, 0x03 – temperature adjustment target, left and right      :internal:
@@ -645,7 +662,7 @@ Pull-up resistor value is 10 kΩ.
 
 Data index 0x08.  Sensor resistance ranges between 100 Ω and >70 kΩ.
 Measurements of resistances over 70 kΩ are flaky at best, and
-therefore irrelevant.  Value of -61 is never seen.
+therefore irrelevant.  Value of -63 is never seen.
 
 | resistance | voltage | value |  temp |
 |------------+---------+-------+-------|
