@@ -97,7 +97,7 @@ During the calibration time the temperature control may seem erratic.
 (Note!  The actual temperature value here might not be accurate as
 it's not directly comparable to another temperature value.)
 
-These unsigned bytes range between 0 (10 °C) and 243 (0xf3, 70.75 °C).
+These unsigned bytes range between 0 (12 °C) and 243 (0xf3, 72.75 °C).
 The actual value in °C can be calculated with the following formula:
 
 : actual = (raw + 48) / 4
