@@ -622,13 +622,13 @@ building a testing rig for these control units.
 *** Interior air, mixing chamber, and evaporator temperatures – pins 9, 11, 12, 13
 
 mix : Mixing chamber temperature (0x05 and 0x06) – resistance range
-between 820 Ω and 20 kΩ.
+between 820 Ω and 20 kΩ, voltage range between 3.34 V and 0.38 V.
 
 int. : Interior air temperature (0x07) – resistance range between
-2.2 kΩ and 46 kΩ.
+2.2 kΩ and 46 kΩ, voltage range between 4.11 V and 0.94 V.
 
 evap. : Evaporator temperature (0x17) – resistance range between
-1.8 kΩ and 34 kΩ.
+1.8 kΩ and 34 kΩ, voltage range between 3.87 V and 0.76 V.
 
 | resistance | voltage | int. | temp | mix |  temp | evap. | temp |
 |------------+---------+------+------+-----+-------+-------+------|
@@ -661,8 +661,9 @@ Pull-up resistor value is 10 kΩ.
 *** Exterior air temperature – pin 10
 
 Data index 0x08.  Sensor resistance ranges between 100 Ω and >70 kΩ.
-Measurements of resistances over 70 kΩ are flaky at best, and
-therefore irrelevant.  Value of -63 is never seen.
+Signal voltage ranges between 4.88 V and 0.17 V.  Measurements of
+resistances over 70 kΩ are flaky at best, and therefore irrelevant.
+Value of -63 is never seen.
 
 | resistance | voltage | value |  temp |
 |------------+---------+-------+-------|
@@ -695,8 +696,8 @@ Pull-up resistor value is 2.7 kΩ.
 
 *** Engine coolant temperature – pin 14
 
-Data index 0x16.  Resistance range between 158 Ω and 13 kΩ.  Value of
-6 is never seen.
+Data index 0x16.  Resistance range between 158 Ω and 13 kΩ.  Voltage
+range between 3.80 V and 1.00 V.  Value of 6 is never seen.
 
 | resistance | voltage | value |
 |------------+---------+-------|
