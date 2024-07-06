@@ -618,6 +618,10 @@ the pull-up resistors.
 These tables serve as an aid to match potentiometer values when
 building a testing rig for these control units.
 
+A calibration point for the air temperature sensors seems to be at
+3.00 volts.  At this signal level all the readings are very close to
+16 °C.
+
 
 *** Interior air, mixing chamber, and evaporator temperatures – pins 9, 11, 12, 13
 
