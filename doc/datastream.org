@@ -805,3 +805,49 @@ adjustment target, use the following formula (// = integer division):
 
 If you want the actual temperature difference value in °C, divide the
 above raw value by 5.
+
+
+* Test rig theory
+
+To create a test rig for these control units, partial automation would
+most likely be useful.  With some consideration the two parameters to
+set manually would be the exterior temperature and the engine coolant
+temperature.  Other temperature values can be derived from those with
+op-amp integrators controlled by various actuators.
+
+Since the temperature sensors operate as current sinks to ground, they
+can be simulated with simple NPN transistor circuits that are driven
+by op-amps in voltage follower configuration, the voltage to follow
+being the sensor circuit voltage.
+
+Water valve and A/C compressor actuation circuits should be buffered
+through PNP transistor circuits.  The purpose is to isolate the
+actuation circuits from affecting op-amp circuits.  This will also
+allow proper loading of the actuation circuits if necessary.
+
+:     [water valve]   [A/C] -->(i)<-- {ext.}
+:           |                   |       |
+:           v                   v       |
+: {ECT} -->(i)<-------------- evap.     |
+:           |                           |
+:           v                           |
+:          mix --->(i)<-----------------/
+:                   |
+:                   v
+:                  int.
+
+The mixing chamber temperature (~mix~ in the diagram above) should be
+created with an integrator that approaches either engine coolant
+temperature (~{ECT}~) or evaporator temperature (~evap.~) depending on
+water valve actuation.
+
+The evaporator temperature should be created by an integrator that
+approaches exterior temperature (~{ext.}~) or negative infinity
+depending on A/C compressor actuation (~[A/C]~).
+
+The interior temperature should be created by an integrator that
+approaches the average of left and right mixing chamber temperatures.
+This may be biased by the exterior temperature.  A possible
+consideration would be to slow down the integrator when the difference
+between mixing chamber temperatures and the exterior temperature are
+large and speed it up when air recirculation is active.
