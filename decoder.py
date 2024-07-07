@@ -340,8 +340,6 @@ def printByte(outwin, msg_pad, byte, ticker):
             colour = 0
             if rawi < 6:
                 colour = curses.color_pair(1)
-#            elif rawi > 129:
-#                colour = curses.color_pair(3)
             elif rawi > 107:
                 colour = curses.color_pair(2)
             outwin.addstr(getLine(ticker), getCol(ticker), f"{rawi:4d} ", colour)
