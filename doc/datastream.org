@@ -186,7 +186,7 @@ These values provide the temperature references for the valve control
 feedback loop.  Some sort of reference actual value in °C can be
 calculated with the following formula:
 
-: actual = raw / 4
+: actual = raw / 4 + 10
 
 It has been observed that these values decrese by one every two
 seconds or increase by one every five seconds.

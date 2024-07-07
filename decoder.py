@@ -312,7 +312,7 @@ def printByte(outwin, msg_pad, byte, ticker):
             outwin.addstr(f"{(byte[0] - 80):4d}")
 
         case 0x0e | 0x0f:  # mixing chamber temperature reference, left and right
-            outwin.addstr(getLine(ticker), getCol(ticker), f" {byte[0]:3d} {(byte[0] / 4):6.2f}°")
+            outwin.addstr(getLine(ticker), getCol(ticker), f" {byte[0]:3d} {(byte[0] / 4 + 10):6.2f}°")
 
         case 0x10 | 0x11:  # valve drive reference, left and right
             outwin.addstr(getLine(ticker), getCol(ticker), f" {byte[0]:3d} {(byte[0] - 80):4d}")
