@@ -183,16 +183,23 @@ affects this value directly about 3-4 units (0.75-1.00 °C).
 
 These values slowly follow the values of 0x0c and 0x0d respectively.
 These values provide the temperature references for the valve control
-feedback loop.  The actual value in °C can be calculated with the
-following formula:
+feedback loop.  Some sort of reference actual value in °C can be
+calculated with the following formula:
 
 : actual = raw / 4
+
+It has been observed that these values decrese by one every two
+seconds or increase by one every five seconds.
 
 
 ** 0x10, 0x11 – heating control, left and right                    :internal:
 
-These values follow the values of 0x0c and 0x0d with a dampening.
-It's not yet clear how these values affect the heating control.
+These values follow the values of 0x0c and 0x0d with a dampening.  It
+has been observed that these values may provide reference to when the
+coolant circulation pump is actuated.
+
+These value decrease by one every second or increase by one every
+three seconds.
 
 
 ** 0x12, 0x13 – water valve feedback bias, left and right          :internal:
