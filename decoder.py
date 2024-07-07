@@ -230,7 +230,7 @@ def printByte(outwin, msg_pad, byte, ticker):
             actualf = (int.from_bytes(byte, byteorder="big", signed=True) + 126) / 5
             outwin.addstr(getLine(ticker), getCol(ticker), f"{int.from_bytes(byte, byteorder='big', signed=True):4d} ")
             outwin.addstr(f"{actualf:5.1f}°")
-            updateAdjTargetDeltas(outwin)
+#            updateAdjTargetDeltas(outwin)
 
         case 0x04: # self-calibration timer a.k.a. switch-on countdown
             rawi = int.from_bytes(byte, byteorder="big")
@@ -299,7 +299,7 @@ def printByte(outwin, msg_pad, byte, ticker):
             outwin.addstr(getLine(ticker), getCol(ticker), f"{rawi:+4d} = ")
             outwin.addstr(f"{(-1 * (((rawi + 1) // 2) + 7) / 5):+5.1f} °C ", colour)
             outwin.addstr(f"{(rawi / 5):+5.1f} °C")
-            updateExtTempBiasDelta(outwin)
+#            updateExtTempBiasDelta(outwin)
 
         case 0x0c | 0x0d:  # heater drive, left and right
             if (byte[0] < 80):
